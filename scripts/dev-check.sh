@@ -31,14 +31,21 @@ Optional — enhanced discovery & scraping:
 Optional — GitHub PR automation:
   GITHUB_TOKEN                   Personal access token with repo scope
 
-Optional — cron / scheduled optimize:
-  CRON_SECRET                    Bearer token for manual POST /api/optimize (Vercel cron uses x-vercel-cron)
+Optional — Fly.io / cron (see docs/FLY_DEPLOY.md):
+  CRON_SECRET                    Bearer token for POST /api/optimize and GET /api/cron/re-audit-leads
 
 Optional — Core Web Vitals in research audits:
   GOOGLE_PAGESPEED_API_KEY       Google PageSpeed Insights API key (skips gracefully if unset)
 
 Optional — Slack notifications:
   SLACK_WEBHOOK_URL              Incoming webhook for audit-complete and PR-created alerts
+
+Optional — visitor audit emails (Resend):
+  RESEND_API_KEY                 Sends actionable audit summary when visitor audits complete
+  RESEND_FROM_EMAIL              Verified sender (defaults to onboarding@resend.dev for testing)
+
+Optional — production links in emails:
+  NEXT_PUBLIC_APP_URL            Public app URL used in audit report links
 
 Optional — database reset script (scripts/reset-and-seed.sh):
   SUPABASE_DB_URL                Direct Postgres URI (or DATABASE_URL)

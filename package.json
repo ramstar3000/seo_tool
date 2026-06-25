@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:resend": "node scripts/test-resend.mjs",
+    "deploy:fly": "bash scripts/fly-deploy.sh"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.0",

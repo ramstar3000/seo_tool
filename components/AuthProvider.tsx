@@ -2,7 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
-import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
+import type { PublicSupabaseConfig } from '@/lib/supabase/public-config';
+import { createBrowserSupabaseClient, setBrowserSupabaseConfig } from '@/lib/supabase/browser';
 
 type AuthContextValue = {
   user: User | null;
@@ -16,8 +17,18 @@ const AuthContext = createContext<AuthContextValue>({
   signOut: async () => {},
 });
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
+export function AuthProvider({
+  children,
+  supabaseConfig = null,
+}: {
+  children: React.ReactNode;
+  supabaseConfig?: PublicSupabaseConfig | null;
+}) {
+  if (supabaseConfig) {
+    setBrowserSupabaseConfig(supabaseConfig);
+  }
+
+  const supabase = useMemo(() => createBrowserSupabaseClient(), [supabaseConfig]);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(() => Boolean(supabase));
 

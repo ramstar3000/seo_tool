@@ -3,6 +3,7 @@ import { anthropic } from '@ai-sdk/anthropic';
 import { runResearchAgent } from '@/lib/research/agent';
 import { convertAuditRequestToLead } from '@/lib/leads/convert-from-audit';
 import { inferKeywordFromWebsite } from '@/lib/leads/infer-keyword';
+import { computeAuditScore } from '@/lib/audit/score';
 import { sendAuditCompleteEmail } from '@/lib/email/send-audit-complete';
 import { notifySlack } from '@/lib/notifications/slack';
 import {
@@ -132,10 +133,21 @@ export async function processAuditRequest(requestId: string): Promise<void> {
         .join('\n')
     );
 
+    const emailFindings = result.findings.map((f) => ({
+      severity: f.severity,
+      category: f.category,
+      title: f.title,
+      description: f.description,
+    }));
+
     void sendAuditCompleteEmail({
       to: request.email as string,
       businessName,
       auditRequestId: requestId,
+      websiteUrl: request.website_url as string,
+      score: computeAuditScore(emailFindings),
+      reportSummary,
+      findings: emailFindings,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Audit failed';

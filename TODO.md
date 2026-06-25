@@ -14,6 +14,9 @@
 | `CRON_SECRET` | Optional | Manual cron trigger auth |
 | `GOOGLE_PAGESPEED_API_KEY` | Optional | Core Web Vitals via PageSpeed Insights |
 | `SLACK_WEBHOOK_URL` | Optional | Slack alerts on audit complete / PR created |
+| `RESEND_API_KEY` | Optional | Actionable audit summary email when visitor audits complete |
+| `RESEND_FROM_EMAIL` | Optional | Verified sender domain (default: `onboarding@resend.dev`) |
+| `NEXT_PUBLIC_APP_URL` | Optional | Public URL in audit emails (e.g. production Vercel domain) |
 
 ## Completed in recent builds
 
@@ -30,7 +33,21 @@
 1. Copy `.env.local.example` → `.env.local` and fill Supabase + Anthropic keys
 2. Run `supabase/schema.sql` on a fresh Supabase project (squashed, no migrations)
 3. `npm run dev` and visit `/` to request a free audit
-4. Optional: set `GOOGLE_PAGESPEED_API_KEY`, `SLACK_WEBHOOK_URL`, `CRON_SECRET` on Vercel
+4. Optional: set `GOOGLE_PAGESPEED_API_KEY`, `SLACK_WEBHOOK_URL`, `CRON_SECRET` on Fly (`fly secrets set`)
+
+## Fly.io deploy
+
+```bash
+./scripts/fly-deploy.sh
+# or: fly secrets import < .env && fly deploy
+```
+
+Full guide: `docs/FLY_DEPLOY.md`
+
+GitHub cron secrets (for `.github/workflows/fly-cron.yml`):
+
+- `FLY_APP_URL=https://synapsecro.fly.dev`
+- `CRON_SECRET` (same as Fly)
 
 ## Scripts
 

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { ReportSkeleton } from '@/components/LoadingSkeleton';
 import { PageSpeedPanel } from '@/components/PageSpeedPanel';
+import { PageContainer, SurfaceCard } from '@/components/ui/PageContainer';
 import { scoreLabel } from '@/lib/audit/score';
 
 interface AuditFinding {
@@ -46,22 +47,22 @@ interface AuditRequestResponse {
 }
 
 const PROGRESS_STEPS = [
-  { key: 'scan', label: 'Scanning your site…' },
-  { key: 'competitors', label: 'Checking competitors…' },
-  { key: 'social', label: 'Analyzing social profiles…' },
-  { key: 'report', label: 'Writing your report…' },
+  { key: 'scan', label: 'Scanning your site' },
+  { key: 'competitors', label: 'Checking nearby competitors' },
+  { key: 'social', label: 'Reviewing directory profiles' },
+  { key: 'report', label: 'Preparing your report' },
 ] as const;
 
 function SeverityBadge({ severity }: { severity: string }) {
   const styles =
     severity === 'critical'
-      ? 'bg-red-500/15 text-red-300 border-red-500/30'
+      ? 'bg-red-500/10 text-red-300 border-red-500/25'
       : severity === 'warning'
-        ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-        : 'bg-slate-500/15 text-slate-300 border-slate-500/30';
+        ? 'bg-amber-500/10 text-amber-300 border-amber-500/25'
+        : 'bg-white/[0.04] text-zinc-300 border-white/[0.08]';
 
   return (
-    <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium border capitalize ${styles}`}>
+    <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium border capitalize ${styles}`}>
       {severity}
     </span>
   );
@@ -70,21 +71,21 @@ function SeverityBadge({ severity }: { severity: string }) {
 function ScoreRing({ score }: { score: number }) {
   const { label, tone } = scoreLabel(score);
   const ringColor =
-    tone === 'good' ? 'text-emerald-400' : tone === 'fair' ? 'text-amber-400' : 'text-red-400';
+    tone === 'good' ? 'text-teal-400' : tone === 'fair' ? 'text-amber-400' : 'text-red-400';
 
   return (
     <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
       <div
-        className={`relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full border-4 ${ringColor} border-current bg-slate-900/60`}
+        className={`relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full border-4 ${ringColor} border-current bg-zinc-950/60`}
         role="img"
         aria-label={`Website health score ${score} out of 100`}
       >
-        <span className="text-3xl font-bold text-white tabular-nums">{score}</span>
+        <span className="text-3xl font-semibold text-white tabular-nums">{score}</span>
       </div>
       <div className="text-center sm:text-left">
-        <p className="text-sm text-slate-400 uppercase tracking-wide">Website health score</p>
+        <p className="text-sm text-zinc-400">Website health score</p>
         <p className="text-lg font-semibold text-white">{label}</p>
-        <p className="text-sm text-slate-400 mt-1">Based on SEO, messaging, and online presence checks</p>
+        <p className="text-sm text-zinc-400 mt-1">Based on SEO, messaging, and online presence</p>
       </div>
     </div>
   );
@@ -104,11 +105,11 @@ function AuditProgress({ status, createdAt }: { status: string; createdAt: strin
   }, [createdAt]);
 
   return (
-    <div className="p-5 sm:p-6 rounded-xl bg-blue-500/10 border border-blue-500/30 space-y-5">
-      <div className="flex items-center gap-2 text-blue-200">
-        <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" aria-hidden="true" />
+    <SurfaceCard className="p-5 sm:p-6 space-y-5 border-teal-500/20 bg-teal-500/[0.03]">
+      <div className="flex items-center gap-2 text-teal-200">
+        <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" aria-hidden="true" />
         <p className="font-medium">
-          {status === 'pending' ? 'Your audit is queued…' : 'Your audit is running…'}
+          {status === 'pending' ? 'Queued' : 'Running your audit'}
         </p>
       </div>
       <ol className="space-y-3" aria-label="Audit progress">
@@ -120,22 +121,22 @@ function AuditProgress({ status, createdAt }: { status: string; createdAt: strin
               <span
                 className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${
                   isDone
-                    ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+                    ? 'bg-teal-500/15 border-teal-500/30 text-teal-300'
                     : isActive
-                      ? 'bg-blue-500/20 border-blue-400/50 text-blue-200 animate-pulse'
-                      : 'bg-slate-800 border-slate-700 text-slate-500'
+                      ? 'bg-teal-500/15 border-teal-400/40 text-teal-200'
+                      : 'bg-white/[0.02] border-white/[0.08] text-zinc-500'
                 }`}
                 aria-hidden="true"
               >
                 {isDone ? '✓' : index + 1}
               </span>
-              <span className={isActive || isDone ? 'text-slate-200' : 'text-slate-500'}>{step.label}</span>
+              <span className={isActive || isDone ? 'text-zinc-200' : 'text-zinc-500'}>{step.label}</span>
             </li>
           );
         })}
       </ol>
-      <p className="text-xs text-blue-200/70">This page refreshes automatically. Usually takes 1–3 minutes.</p>
-    </div>
+      <p className="text-xs text-zinc-400">This page refreshes automatically. Usually takes 1–3 minutes.</p>
+    </SurfaceCard>
   );
 }
 
@@ -154,22 +155,21 @@ function FindingsSection({ findings }: { findings: AuditFinding[] }) {
 
   return (
     <section className="space-y-4">
-      <h2 className="text-lg font-semibold text-white">What we found</h2>
+      <h2 className="text-lg font-semibold text-white">Findings</h2>
       {grouped.map(({ severity, items }) => (
         <div key={severity} className="space-y-3">
-          <h3 className="text-sm font-medium text-slate-400 capitalize">{severity} issues</h3>
+          <h3 className="text-sm font-medium text-zinc-400 capitalize">{severity}</h3>
           <ul className="space-y-3">
             {items.map((f, i) => (
-              <li
-                key={`${f.title}-${i}`}
-                className="p-4 rounded-xl border border-slate-800 bg-slate-900/40 space-y-2"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <SeverityBadge severity={f.severity} />
-                  <span className="text-xs text-slate-500 uppercase">{f.category}</span>
-                </div>
-                <p className="font-medium text-white">{f.title}</p>
-                <p className="text-sm text-slate-400 leading-relaxed">{f.description}</p>
+              <li key={`${f.title}-${i}`}>
+                <SurfaceCard className="p-4 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <SeverityBadge severity={f.severity} />
+                    <span className="text-xs text-zinc-500 uppercase">{f.category}</span>
+                  </div>
+                  <p className="font-medium text-white">{f.title}</p>
+                  <p className="text-sm text-zinc-400 leading-relaxed">{f.description}</p>
+                </SurfaceCard>
               </li>
             ))}
           </ul>
@@ -185,15 +185,17 @@ function SeoIssuesSection({ findings }: { findings: AuditFinding[] }) {
 
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold text-white">SEO &amp; technical issues</h2>
+      <h2 className="text-lg font-semibold text-white">SEO &amp; technical</h2>
       <ul className="space-y-2">
         {seoFindings.slice(0, 5).map((f, i) => (
-          <li key={i} className="flex gap-3 text-sm p-3 rounded-lg border border-slate-800 bg-slate-900/30">
-            <SeverityBadge severity={f.severity} />
-            <div>
-              <p className="font-medium text-slate-200">{f.title}</p>
-              <p className="text-slate-500 mt-0.5">{f.description}</p>
-            </div>
+          <li key={i}>
+            <SurfaceCard className="flex gap-3 text-sm p-3">
+              <SeverityBadge severity={f.severity} />
+              <div>
+                <p className="font-medium text-zinc-200">{f.title}</p>
+                <p className="text-zinc-500 mt-0.5">{f.description}</p>
+              </div>
+            </SurfaceCard>
           </li>
         ))}
       </ul>
@@ -249,23 +251,23 @@ export default function VisitorAuditPage({ params }: { params: Promise<{ id: str
     };
   }, [requestId]);
 
-  const title = data?.businessName ?? data?.websiteUrl ?? 'Your website audit';
+  const title = data?.businessName ?? data?.websiteUrl ?? 'Website audit';
   const isRunning = data?.status === 'pending' || data?.status === 'processing';
   const socialFound = data?.socialProfiles.filter((p) => p.status === 'found').length ?? 0;
   const socialTotal = data?.socialProfiles.length ?? 0;
 
   return (
-    <main className="flex-1 bg-slate-950 text-slate-100">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-14 space-y-8">
-        <header className="space-y-2 border-b border-slate-800 pb-6">
-          <p className="text-sm text-emerald-400 font-medium">Free website audit</p>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{title}</h1>
+    <main className="flex-1">
+      <PageContainer narrow className="py-10 sm:py-14 space-y-8">
+        <header className="space-y-2 border-b border-white/[0.06] pb-6">
+          <p className="text-sm text-teal-400 font-medium">Free website audit</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{title}</h1>
           {data?.websiteUrl && (
             <a
               href={data.websiteUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-slate-400 hover:text-emerald-400 break-all"
+              className="text-sm text-zinc-400 hover:text-teal-400 break-all"
             >
               {data.websiteUrl}
             </a>
@@ -273,7 +275,7 @@ export default function VisitorAuditPage({ params }: { params: Promise<{ id: str
         </header>
 
         {error && (
-          <p className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm" role="alert">
+          <p className="p-4 rounded-xl bg-red-500/10 border border-red-500/25 text-red-300 text-sm" role="alert">
             {error}
           </p>
         )}
@@ -283,45 +285,45 @@ export default function VisitorAuditPage({ params }: { params: Promise<{ id: str
         {data && isRunning && <AuditProgress status={data.status} createdAt={data.createdAt} />}
 
         {data?.status === 'failed' && (
-          <div className="p-5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-200 space-y-2">
-            <p className="font-medium">We couldn&apos;t complete your audit</p>
+          <SurfaceCard className="p-5 border-red-500/25 bg-red-500/[0.03] text-red-200 space-y-2">
+            <p className="font-medium">We couldn&apos;t finish this audit</p>
             {data.errorMessage && (
               <p className="text-sm text-red-200/80">{data.errorMessage}</p>
             )}
             <p className="text-sm">
-              <Link href="/" className="underline hover:text-red-100">
-                Request another free audit
+              <Link href="/" className="text-teal-400 hover:underline">
+                Request another audit
               </Link>
             </p>
-          </div>
+          </SurfaceCard>
         )}
 
         {data?.status === 'completed' && (
           <>
             {data.addedToPipeline && (
-              <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200">
-                <p className="font-medium">Added to your pipeline</p>
-                <p className="text-sm text-emerald-200/80 mt-1">
-                  This business is now tracked as a lead in SynapseCRO.{' '}
-                  <Link href="/leads" className="underline hover:text-emerald-100">
+              <SurfaceCard className="p-4 border-teal-500/25 bg-teal-500/[0.03] text-teal-200">
+                <p className="font-medium">Added to leads</p>
+                <p className="text-sm text-teal-200/80 mt-1">
+                  This business is now in your lead list.{' '}
+                  <Link href="/leads" className="text-teal-400 hover:underline">
                     View leads
                   </Link>
                 </p>
-              </div>
+              </SurfaceCard>
             )}
 
             {data.score !== null && (
-              <section className="p-5 sm:p-6 rounded-xl border border-slate-800 bg-slate-900/40">
+              <SurfaceCard className="p-5 sm:p-6">
                 <ScoreRing score={data.score} />
-              </section>
+              </SurfaceCard>
             )}
 
             {data.reportSummary && (
               <section className="space-y-3">
-                <h2 className="text-lg font-semibold text-white">Executive summary</h2>
-                <div className="p-5 rounded-xl border border-slate-800 bg-slate-900/40 whitespace-pre-wrap text-slate-300 leading-relaxed text-sm sm:text-base">
+                <h2 className="text-lg font-semibold text-white">Summary</h2>
+                <SurfaceCard className="p-5 whitespace-pre-wrap text-zinc-300 leading-relaxed text-sm sm:text-base">
                   {data.reportSummary}
-                </div>
+                </SurfaceCard>
               </section>
             )}
 
@@ -330,98 +332,95 @@ export default function VisitorAuditPage({ params }: { params: Promise<{ id: str
 
             {data.pageSpeed && !data.pageSpeed.skipped && (
               <section className="space-y-3">
-                <h2 className="text-lg font-semibold text-white">Core Web Vitals</h2>
-                <div className="p-5 rounded-xl border border-slate-800 bg-slate-900/40">
+                <h2 className="text-lg font-semibold text-white">Page speed</h2>
+                <SurfaceCard className="p-5">
                   <PageSpeedPanel pageSpeed={data.pageSpeed} />
-                </div>
+                </SurfaceCard>
               </section>
             )}
 
             {data.competitors && data.competitors.length > 0 && (
               <section className="space-y-3">
-                <h2 className="text-lg font-semibold text-white">Who you&apos;re up against</h2>
-                <p className="text-sm text-slate-400">
-                  Top competitors ranking for similar searches in your area:
+                <h2 className="text-lg font-semibold text-white">Nearby competitors</h2>
+                <p className="text-sm text-zinc-400">
+                  Who else shows up for similar searches in your area.
                 </p>
-                <ul className="rounded-xl border border-slate-800 divide-y divide-slate-800/80 overflow-hidden">
+                <SurfaceCard className="divide-y divide-white/[0.06] overflow-hidden">
                   {data.competitors.map((c) => (
-                    <li key={c.url} className="px-4 py-3 flex items-center gap-3 text-sm bg-slate-900/30">
-                      <span className="text-slate-500 font-mono text-xs w-8">#{c.rank_position}</span>
+                    <div key={c.url} className="px-4 py-3 flex items-center gap-3 text-sm">
+                      <span className="text-zinc-500 font-mono text-xs w-8">#{c.rank_position}</span>
                       <a
                         href={c.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-emerald-400 hover:underline truncate"
+                        className="text-teal-400 hover:underline truncate"
                       >
                         {c.business_name}
                       </a>
-                    </li>
+                    </div>
                   ))}
-                </ul>
+                </SurfaceCard>
               </section>
             )}
 
             {socialTotal > 0 && (
               <section className="space-y-3">
-                <h2 className="text-lg font-semibold text-white">Social &amp; directory presence</h2>
-                <p className="text-sm text-slate-400">
+                <h2 className="text-lg font-semibold text-white">Directory profiles</h2>
+                <p className="text-sm text-zinc-400">
                   Found {socialFound} of {socialTotal} profiles we checked.
                 </p>
                 <ul className="grid gap-2 sm:grid-cols-2">
                   {data.socialProfiles.map((p) => (
-                    <li
-                      key={p.platform_id}
-                      className="flex items-center justify-between gap-2 p-3 rounded-lg border border-slate-800 bg-slate-900/30 text-sm"
-                    >
-                      <span className="text-slate-300">{p.platform_name}</span>
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded border capitalize ${
-                          p.status === 'found'
-                            ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                            : 'bg-slate-700/50 text-slate-400 border-slate-600/50'
-                        }`}
-                      >
-                        {p.status === 'found' ? 'Found' : 'Missing'}
-                      </span>
+                    <li key={p.platform_id}>
+                      <SurfaceCard className="flex items-center justify-between gap-2 p-3 text-sm">
+                        <span className="text-zinc-300">{p.platform_name}</span>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-md border capitalize ${
+                            p.status === 'found'
+                              ? 'bg-teal-500/10 text-teal-300 border-teal-500/25'
+                              : 'bg-white/[0.04] text-zinc-400 border-white/[0.08]'
+                          }`}
+                        >
+                          {p.status === 'found' ? 'Found' : 'Missing'}
+                        </span>
+                      </SurfaceCard>
                     </li>
                   ))}
                 </ul>
               </section>
             )}
 
-            <section className="p-5 sm:p-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 space-y-3">
-              <h2 className="text-lg font-semibold text-emerald-200">Want us to fix this?</h2>
-              <p className="text-sm text-emerald-100/90 leading-relaxed">
-                SynapseCRO can improve your landing page, fix SEO issues, and even open GitHub pull requests
-                with suggested changes — automatically.
+            <SurfaceCard className="p-5 sm:p-6 space-y-3 border-teal-500/20 bg-teal-500/[0.03]">
+              <h2 className="text-lg font-semibold text-teal-200">Need help fixing these?</h2>
+              <p className="text-sm text-zinc-300 leading-relaxed">
+                We can update your landing page, address SEO issues, and open GitHub pull requests
+                with suggested changes.
               </p>
-              <p className="text-sm">
-                <a
-                  href="mailto:hello@synapsecro.com?subject=Help%20with%20my%20website%20audit"
-                  className="inline-flex min-h-11 items-center px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition-colors"
-                >
-                  Contact us to get started
-                </a>
-              </p>
-            </section>
+              <a
+                href="mailto:hello@synapsecro.com?subject=Help%20with%20my%20website%20audit"
+                className="inline-flex min-h-11 items-center px-5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium transition-colors"
+              >
+                Get in touch
+              </a>
+            </SurfaceCard>
 
             {data.researchUrl && (
-              <p className="text-sm text-slate-400">
-                Want the full technical breakdown?{' '}
-                <Link href={data.researchUrl} className="text-emerald-400 hover:underline">
-                  View detailed research report
+              <p className="text-sm text-zinc-400">
+                Full technical report:{' '}
+                <Link href={data.researchUrl} className="text-teal-400 hover:underline">
+                  View detailed audit
                 </Link>
               </p>
             )}
           </>
         )}
 
-        <p className="text-sm text-slate-500 pt-4">
-          <Link href="/" className="text-emerald-400 hover:underline">
-            ← Back to SynapseCRO
+        <p className="text-sm text-zinc-500 pt-4">
+          <Link href="/" className="text-teal-400 hover:underline">
+            ← Home
           </Link>
         </p>
-      </div>
+      </PageContainer>
     </main>
   );
 }

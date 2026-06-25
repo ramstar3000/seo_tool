@@ -183,12 +183,12 @@ export function LinkedRepositoriesPanel({
   const canCreatePr = Boolean(auditId && auditStatus === 'completed' && githubConfigured);
 
   return (
-    <div className={`space-y-4 ${compact ? '' : 'p-5 rounded-xl border border-slate-800 bg-slate-900/40'}`}>
+    <div className={`space-y-4 ${compact ? '' : 'p-5 rounded-2xl border border-white/[0.06] bg-white/[0.02]'}`}>
       {!compact && (
         <div>
           <h2 className="text-lg font-semibold text-white">Linked repositories</h2>
-          <p className="text-sm text-slate-400 mt-1">
-            Connect GitHub repos to propose SEO/CRO fixes as pull requests from audit findings.
+          <p className="text-sm text-zinc-400 mt-1">
+            Connect a GitHub repo to open pull requests with SEO fixes from audit findings.
           </p>
         </div>
       )}
@@ -202,7 +202,7 @@ export function LinkedRepositoriesPanel({
       )}
 
       {auditId && auditStatus !== 'completed' && (
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-zinc-500">
           Complete the audit before creating a PR from findings.
         </p>
       )}
@@ -216,29 +216,29 @@ export function LinkedRepositoriesPanel({
       <form onSubmit={(e) => void handleLink(e)} className="space-y-3">
         <div className={`grid gap-3 ${compact ? 'grid-cols-1' : 'sm:grid-cols-2'}`}>
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-400">GitHub repo URL</span>
+            <span className="text-xs font-medium text-zinc-400">GitHub repo URL</span>
             <input
               type="url"
               value={repoUrl}
               onChange={(e) => setRepoUrl(e.target.value)}
               placeholder="https://github.com/owner/repo"
-              className="w-full min-h-10 px-3 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100"
+              className="w-full min-h-10 px-3 rounded-xl bg-zinc-950/80 border border-white/[0.08] text-sm text-zinc-100 focus:border-teal-500/40 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
               required
             />
           </label>
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-400">Label (optional)</span>
+            <span className="text-xs font-medium text-zinc-400">Label (optional)</span>
             <input
               type="text"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="Marketing site"
-              className="w-full min-h-10 px-3 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100"
+              className="w-full min-h-10 px-3 rounded-xl bg-zinc-950/80 border border-white/[0.08] text-sm text-zinc-100 focus:border-teal-500/40 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
             />
           </label>
         </div>
         <label className="block space-y-1">
-          <span className="text-xs font-medium text-slate-400">
+          <span className="text-xs font-medium text-zinc-400">
             Content path hints (optional, comma-separated)
           </span>
           <input
@@ -246,22 +246,22 @@ export function LinkedRepositoriesPanel({
             value={contentPaths}
             onChange={(e) => setContentPaths(e.target.value)}
             placeholder="app/page.tsx, src/content/hero.json"
-            className="w-full min-h-10 px-3 rounded-lg bg-slate-950 border border-slate-700 text-sm text-slate-100"
+            className="w-full min-h-10 px-3 rounded-xl bg-zinc-950/80 border border-white/[0.08] text-sm text-zinc-100 focus:border-teal-500/40 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
           />
         </label>
         <button
           type="submit"
           disabled={isLinking}
-          className="inline-flex min-h-10 items-center px-4 rounded-lg bg-slate-800 border border-slate-600 text-sm font-medium text-slate-100 hover:bg-slate-700 disabled:opacity-60"
+          className="inline-flex min-h-10 items-center px-4 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm font-medium text-zinc-100 hover:bg-white/[0.06] disabled:opacity-60"
         >
           {isLinking ? 'Linking…' : 'Link repository'}
         </button>
       </form>
 
       {isLoading ? (
-        <p className="text-sm text-slate-500">Loading linked repositories…</p>
+        <p className="text-sm text-zinc-500">Loading linked repositories…</p>
       ) : repos.length === 0 ? (
-        <p className="text-sm text-slate-500">No repositories linked yet.</p>
+        <p className="text-sm text-zinc-500">No repositories linked yet.</p>
       ) : (
         <ul className="space-y-3">
           {repos.map((repo) => {
@@ -271,7 +271,7 @@ export function LinkedRepositoriesPanel({
             return (
               <li
                 key={repo.id}
-                className="p-4 rounded-lg border border-slate-800 bg-slate-950/50 space-y-2"
+                className="p-4 rounded-xl border border-white/[0.06] bg-zinc-950/40 space-y-2"
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
@@ -282,11 +282,11 @@ export function LinkedRepositoriesPanel({
                       href={repo.repo_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-emerald-400 hover:underline"
+                      className="text-xs text-teal-400 hover:underline"
                     >
                       {repo.repo_url}
                     </a>
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs text-zinc-500 mt-1">
                       Branch: {repo.default_branch}
                       {repo.content_paths.length > 0 && (
                         <> · Paths: {repo.content_paths.join(', ')}</>
@@ -299,7 +299,7 @@ export function LinkedRepositoriesPanel({
                         type="button"
                         onClick={() => void handleApply(repo.id)}
                         disabled={applyingId === repo.id}
-                        className="text-xs font-medium px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 disabled:opacity-60"
+                        className="text-xs font-medium px-3 py-1.5 rounded-lg bg-teal-500/15 text-teal-300 border border-teal-500/30 hover:bg-teal-500/25 disabled:opacity-60"
                       >
                         {applyingId === repo.id ? 'Creating PR…' : 'Create PR from findings'}
                       </button>
@@ -315,15 +315,15 @@ export function LinkedRepositoriesPanel({
                 </div>
 
                 {latestRun && (
-                  <div className="text-xs space-y-1 pt-1 border-t border-slate-800">
+                  <div className="text-xs space-y-1 pt-1 border-t border-white/[0.06]">
                     {latestRun.status === 'completed' && latestRun.pr_url && (
-                      <p className="text-emerald-300">
+                      <p className="text-teal-300">
                         PR #{latestRun.pr_number}:{' '}
                         <a
                           href={latestRun.pr_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="underline hover:text-emerald-200"
+                          className="underline hover:text-teal-200"
                         >
                           {latestRun.pr_url}
                         </a>
@@ -333,10 +333,10 @@ export function LinkedRepositoriesPanel({
                       <p className="text-red-300">Failed: {latestRun.error_message ?? 'Unknown error'}</p>
                     )}
                     {latestRun.status === 'pending' && (
-                      <p className="text-slate-500">PR creation in progress…</p>
+                      <p className="text-zinc-500">PR creation in progress…</p>
                     )}
                     {latestRun.files_changed && latestRun.files_changed.length > 0 && (
-                      <p className="text-slate-500">
+                      <p className="text-zinc-500">
                         Files: {latestRun.files_changed.join(', ')}
                       </p>
                     )}

@@ -27,13 +27,13 @@ interface SocialPresencePanelProps {
 function statusStyles(status: SocialProfileStatus): string {
   switch (status) {
     case 'found':
-      return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+      return 'bg-teal-500/15 text-teal-300 border-teal-500/30';
     case 'missing':
       return 'bg-amber-500/15 text-amber-300 border-amber-500/30';
     case 'error':
       return 'bg-red-500/15 text-red-300 border-red-500/30';
     default:
-      return 'bg-slate-700/50 text-slate-400 border-slate-600/50';
+      return 'bg-zinc-700/50 text-zinc-400 border-zinc-600/50';
   }
 }
 
@@ -61,7 +61,7 @@ export function SocialPresencePanel({
 
   if (profiles.length === 0) {
     return (
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-zinc-500">
         No social presence data. Run a research audit to check directory profiles.
       </p>
     );
@@ -69,14 +69,14 @@ export function SocialPresencePanel({
 
   return (
     <div className={compact ? 'space-y-3' : 'space-y-5'}>
-      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
         <span>{foundCount} found</span>
         <span aria-hidden>·</span>
         <span>{missingCount} missing</span>
         {!searched && (
           <>
             <span aria-hidden>·</span>
-            <span className="text-slate-500">SerpAPI not used — checklist only</span>
+            <span className="text-zinc-500">SerpAPI not used — checklist only</span>
           </>
         )}
       </div>
@@ -109,8 +109,8 @@ export function SocialPresencePanel({
           .filter((p) => p.bio_text && p.status === 'found')
           .slice(0, 4)
           .map((p) => (
-            <div key={`bio-${p.platform_id}`} className="text-xs text-slate-400">
-              <span className="text-slate-300 font-medium">{p.platform_name}:</span>{' '}
+            <div key={`bio-${p.platform_id}`} className="text-xs text-zinc-400">
+              <span className="text-zinc-300 font-medium">{p.platform_name}:</span>{' '}
               {p.bio_text!.slice(0, 160)}
               {p.bio_text!.length > 160 ? '…' : ''}
             </div>
@@ -125,11 +125,11 @@ export function SocialPresencePanel({
             {inconsistencies.map((issue, i) => (
               <li
                 key={`${issue.type}-${i}`}
-                className="text-slate-300 leading-relaxed pl-3 border-l-2 border-amber-500/40"
+                className="text-zinc-300 leading-relaxed pl-3 border-l-2 border-amber-500/40"
               >
                 {issue.description}
                 {issue.recommendation && !compact && (
-                  <span className="block text-xs text-slate-500 mt-0.5">{issue.recommendation}</span>
+                  <span className="block text-xs text-zinc-500 mt-0.5">{issue.recommendation}</span>
                 )}
               </li>
             ))}

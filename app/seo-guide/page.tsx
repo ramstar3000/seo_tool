@@ -4,17 +4,18 @@ import {
   getPracticeCategories,
   SEO_BEST_PRACTICES,
 } from '@/lib/seo/best-practices';
+import { PageContainer, SurfaceCard } from '@/components/ui/PageContainer';
 
 export const metadata = {
   title: 'SEO Guide — SynapseCRO',
   description:
-    'Actionable SEO best practices for London local businesses: GBP, on-page, technical, CRO, and content.',
+    'Practical SEO checklist for London local businesses: Google Business Profile, on-page, technical, and content.',
 };
 
 function priorityBadge(priority: 'high' | 'medium'): string {
   return priority === 'high'
-    ? 'bg-red-500/15 text-red-300 border-red-500/30'
-    : 'bg-slate-700/50 text-slate-300 border-slate-600';
+    ? 'bg-red-500/10 text-red-300 border-red-500/25'
+    : 'bg-white/[0.04] text-zinc-300 border-white/[0.08]';
 }
 
 export default function SeoGuidePage() {
@@ -23,33 +24,32 @@ export default function SeoGuidePage() {
   const highCount = SEO_BEST_PRACTICES.filter((p) => p.priority === 'high').length;
 
   return (
-    <main className="flex-1 bg-slate-950 text-slate-100">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-14 space-y-10">
-        <header className="space-y-3 border-b border-slate-800 pb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-            SEO Best Practices for London Local Businesses
+    <main className="flex-1">
+      <PageContainer className="py-10 sm:py-14 space-y-10">
+        <header className="space-y-3 border-b border-white/[0.06] pb-8">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">
+            SEO guide for local businesses
           </h1>
-          <p className="text-slate-400 text-base sm:text-lg max-w-2xl leading-relaxed">
-            Curated guidance from Google Search Central, Moz, Semrush, and web.dev — synthesised
-            for trades, clinics, hospitality, and professional services targeting borough-level
-            search.
+          <p className="text-zinc-400 max-w-2xl leading-relaxed">
+            A practical checklist drawn from Google Search Central, Moz, and web.dev — focused on
+            trades, clinics, hospitality, and services targeting local search.
           </p>
-          <div className="flex flex-wrap gap-3 text-sm">
-            <span className="inline-flex items-center px-3 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-              {SEO_BEST_PRACTICES.length} practices
+          <div className="flex flex-wrap gap-2 text-sm">
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/[0.04] text-zinc-300 border border-white/[0.08]">
+              {SEO_BEST_PRACTICES.length} items
             </span>
             <span className="inline-flex items-center px-3 py-1 rounded-full bg-red-500/10 text-red-300 border border-red-500/25">
               {highCount} high priority
             </span>
-            <span className="inline-flex items-center px-3 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/[0.04] text-zinc-300 border border-white/[0.08]">
               {categories.length} categories
             </span>
           </div>
           <Link
             href="/leads"
-            className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
+            className="inline-flex min-h-10 items-center text-sm font-medium text-teal-400 hover:text-teal-300"
           >
-            ← Back to leads pipeline
+            ← Leads
           </Link>
         </header>
 
@@ -63,35 +63,34 @@ export default function SeoGuidePage() {
                 className="text-lg sm:text-xl font-semibold text-white mb-4"
               >
                 {category}
-                <span className="ml-2 text-sm font-normal text-slate-500">({items.length})</span>
+                <span className="ml-2 text-sm font-normal text-zinc-500">({items.length})</span>
               </h2>
-              <ul className="space-y-4">
+              <ul className="space-y-3">
                 {items.map((practice) => (
-                  <li
-                    key={practice.id}
-                    className="p-5 sm:p-6 rounded-xl border border-slate-800 bg-slate-900/40 space-y-2"
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-semibold text-white">{practice.title}</h3>
-                      <span
-                        className={`inline-flex px-2 py-0.5 rounded-md text-xs font-semibold uppercase tracking-wide border ${priorityBadge(practice.priority)}`}
-                      >
-                        {practice.priority}
-                      </span>
-                    </div>
-                    <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
-                      {practice.description}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      Applies to: {practice.appliesTo.join(', ')} · Source: {practice.source}
-                    </p>
+                  <li key={practice.id}>
+                    <SurfaceCard className="p-5 sm:p-6 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="font-medium text-white">{practice.title}</h3>
+                        <span
+                          className={`inline-flex px-2 py-0.5 rounded-md text-xs font-semibold uppercase tracking-wide border ${priorityBadge(practice.priority)}`}
+                        >
+                          {practice.priority}
+                        </span>
+                      </div>
+                      <p className="text-zinc-400 text-sm sm:text-base leading-relaxed">
+                        {practice.description}
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        Applies to: {practice.appliesTo.join(', ')} · Source: {practice.source}
+                      </p>
+                    </SurfaceCard>
                   </li>
                 ))}
               </ul>
             </section>
           );
         })}
-      </div>
+      </PageContainer>
     </main>
   );
 }

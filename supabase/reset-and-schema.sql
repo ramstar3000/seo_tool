@@ -41,9 +41,9 @@ create table public.site_copy (
 );
 
 insert into public.site_copy (id, text_content) values
-  ('hero_title', 'Autonomous Agent Systems For Local Business'),
-  ('hero_subtitle', 'We help local brands gain discovery through tailored optimization packages.'),
-  ('cta_text', 'Secure Free Audit');
+  ('hero_title', 'Rank higher. Get more visits.'),
+  ('hero_subtitle', 'We improve your SEO and landing page so you show up in search and turn visits into enquiries.'),
+  ('cta_text', 'Get a free audit');
 
 -- 2. User Activity Log (Sensory Input)
 create table public.analytics_events (

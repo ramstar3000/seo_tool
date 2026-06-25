@@ -12,7 +12,7 @@ import {
 function priorityClass(priority: SeoBestPractice['priority']): string {
   return priority === 'high'
     ? 'bg-red-500/15 text-red-300 border-red-500/30'
-    : 'bg-slate-700/50 text-slate-300 border-slate-600';
+    : 'bg-zinc-700/50 text-zinc-300 border-zinc-600';
 }
 
 interface SeoBestPracticesPanelProps {
@@ -34,7 +34,7 @@ export function SeoBestPracticesPanel({
 
   return (
     <aside
-      className={`rounded-xl border border-slate-800 bg-slate-900/40 ${
+      className={`rounded-2xl border border-white/[0.06] bg-white/[0.02] ${
         compact ? 'text-sm' : ''
       }`}
       aria-labelledby="seo-practices-heading"
@@ -42,44 +42,44 @@ export function SeoBestPracticesPanel({
       <button
         type="button"
         onClick={() => setIsOpen((v) => !v)}
-        className="w-full flex items-center justify-between gap-3 px-4 sm:px-5 py-4 text-left hover:bg-slate-800/40 rounded-xl transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+        className="w-full flex items-center justify-between gap-3 px-4 sm:px-5 py-4 text-left hover:bg-white/[0.02] rounded-2xl transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400"
         aria-expanded={isOpen}
       >
         <div>
           <h2 id="seo-practices-heading" className="font-semibold text-white">
-            SEO Best Practices
+            SEO checklist
           </h2>
-          <p className="text-slate-400 text-xs sm:text-sm mt-0.5">
-            {SEO_BEST_PRACTICES.length} actions · {highCount} high priority · London local focus
+          <p className="text-zinc-400 text-xs sm:text-sm mt-0.5">
+            {SEO_BEST_PRACTICES.length} items · {highCount} high priority
           </p>
         </div>
-        <span className="text-slate-400 shrink-0" aria-hidden="true">
+        <span className="text-zinc-400 shrink-0" aria-hidden="true">
           {isOpen ? '−' : '+'}
         </span>
       </button>
 
       {isOpen && (
-        <div className="px-4 sm:px-5 pb-4 space-y-3 border-t border-slate-800/80 pt-3">
+        <div className="px-4 sm:px-5 pb-4 space-y-3 border-t border-white/[0.06] pt-3">
           {SEO_PRACTICE_CATEGORIES.map((category) => {
             const practices = byCategory[category];
             const isCategoryOpen = expandedCategory === category;
 
             return (
-              <div key={category} className="rounded-lg border border-slate-800/80 overflow-hidden">
+              <div key={category} className="rounded-xl border border-white/[0.06] overflow-hidden">
                 <button
                   type="button"
                   onClick={() => setExpandedCategory(isCategoryOpen ? null : category)}
-                  className="w-full flex items-center justify-between px-3 py-2.5 bg-slate-900/60 hover:bg-slate-800/50 text-left transition-colors"
+                  className="w-full flex items-center justify-between px-3 py-2.5 bg-white/[0.02] hover:bg-white/[0.04] text-left transition-colors"
                   aria-expanded={isCategoryOpen}
                 >
-                  <span className="font-medium text-slate-200">{category}</span>
-                  <span className="text-xs text-slate-500">
+                  <span className="font-medium text-zinc-200">{category}</span>
+                  <span className="text-xs text-zinc-500">
                     {practices.length} · {isCategoryOpen ? '−' : '+'}
                   </span>
                 </button>
 
                 {isCategoryOpen && (
-                  <ul className="divide-y divide-slate-800/80">
+                  <ul className="divide-y divide-white/[0.06]">
                     {practices.map((practice) => (
                       <li key={practice.title} className="px-3 py-3 space-y-1.5">
                         <div className="flex flex-wrap items-center gap-2">
@@ -90,9 +90,9 @@ export function SeoBestPracticesPanel({
                             {practice.priority}
                           </span>
                         </div>
-                        <p className="text-slate-400 text-xs leading-relaxed">{practice.description}</p>
+                        <p className="text-zinc-400 text-xs leading-relaxed">{practice.description}</p>
                         {practice.source && (
-                          <p className="text-slate-600 text-[10px]">Source: {practice.source}</p>
+                          <p className="text-zinc-600 text-[10px]">Source: {practice.source}</p>
                         )}
                       </li>
                     ))}

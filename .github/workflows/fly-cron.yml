@@ -1,0 +1,34 @@
+name: Fly cron
+
+on:
+  schedule:
+    # CRO optimize — every 15 minutes (matches former vercel.json)
+    - cron: '*/15 * * * *'
+    # Re-audit stale leads — Mondays 09:00 UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  optimize:
+    if: github.event.schedule == '*/15 * * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST /api/optimize
+        run: |
+          curl -sf -X POST "${FLY_APP_URL}/api/optimize" \
+            -H "Authorization: Bearer ${CRON_SECRET}"
+        env:
+          FLY_APP_URL: ${{ secrets.FLY_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
+  re-audit-leads:
+    if: github.event.schedule == '0 9 * * 1'
+    runs-on: ubuntu-latest
+    steps:
+      - name: GET /api/cron/re-audit-leads
+        run: |
+          curl -sf "${FLY_APP_URL}/api/cron/re-audit-leads" \
+            -H "Authorization: Bearer ${CRON_SECRET}"
+        env:
+          FLY_APP_URL: ${{ secrets.FLY_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}

@@ -18,8 +18,8 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 
 const variantStyles: Record<ToastVariant, string> = {
   error: 'bg-red-500/15 border-red-500/40 text-red-200',
-  success: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-200',
-  info: 'bg-blue-500/15 border-blue-500/40 text-blue-200',
+  success: 'bg-teal-500/15 border-teal-500/40 text-teal-200',
+  info: 'bg-teal-500/15 border-teal-500/40 text-teal-200',
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {

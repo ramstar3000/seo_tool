@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FormEvent, Suspense, useMemo, useState } from 'react';
+import { formInputClass, PageContainer, SurfaceCard } from '@/components/ui/PageContainer';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 
 function LoginForm() {
@@ -29,7 +30,7 @@ function LoginForm() {
 
   if (!supabase) {
     return (
-      <p className="text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+      <p className="text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
         Supabase is not configured. Add your project URL and anon key to <code className="text-amber-200">.env.local</code>.
       </p>
     );
@@ -95,36 +96,27 @@ function LoginForm() {
     }
   }
 
+  const modeButtonClass = (active: boolean) =>
+    `flex-1 min-h-10 rounded-lg text-sm font-medium transition-colors ${
+      active
+        ? 'bg-teal-500/10 text-teal-300 border border-teal-500/25'
+        : 'text-zinc-400 hover:text-white'
+    }`;
+
   return (
     <div className="space-y-6">
       <header className="space-y-2 text-center">
-        <h1 className="text-2xl sm:text-3xl font-bold text-white">Welcome back</h1>
-        <p className="text-slate-400 text-sm sm:text-base">
-          Sign in to run research audits, link repos, and create GitHub PRs.
+        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">Sign in</h1>
+        <p className="text-zinc-400 text-sm sm:text-base leading-relaxed">
+          Access audits, lead research, and linked GitHub repos.
         </p>
       </header>
 
-      <div className="flex rounded-lg border border-slate-800 p-1 bg-slate-900/60">
-        <button
-          type="button"
-          onClick={() => setMode('password')}
-          className={`flex-1 min-h-10 rounded-md text-sm font-medium transition-colors ${
-            mode === 'password'
-              ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
+      <div className="flex rounded-xl border border-white/[0.06] p-1 bg-white/[0.02]">
+        <button type="button" onClick={() => setMode('password')} className={modeButtonClass(mode === 'password')}>
           Password
         </button>
-        <button
-          type="button"
-          onClick={() => setMode('magic')}
-          className={`flex-1 min-h-10 rounded-md text-sm font-medium transition-colors ${
-            mode === 'magic'
-              ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
+        <button type="button" onClick={() => setMode('magic')} className={modeButtonClass(mode === 'magic')}>
           Magic link
         </button>
       </div>
@@ -133,29 +125,29 @@ function LoginForm() {
         onSubmit={mode === 'password' ? handlePasswordSignIn : handleMagicLink}
         className="space-y-4"
       >
-        <label className="block space-y-2">
-          <span className="text-sm font-medium text-slate-300">Email</span>
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-zinc-300">Email</span>
           <input
             type="email"
             required
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full min-h-11 rounded-lg border border-slate-700 bg-slate-900 px-3 text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:outline-none"
+            className={formInputClass}
             placeholder="you@company.com"
           />
         </label>
 
         {mode === 'password' && (
-          <label className="block space-y-2">
-            <span className="text-sm font-medium text-slate-300">Password</span>
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-zinc-300">Password</span>
             <input
               type="password"
               required
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full min-h-11 rounded-lg border border-slate-700 bg-slate-900 px-3 text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:outline-none"
+              className={formInputClass}
               placeholder="••••••••"
             />
           </label>
@@ -163,10 +155,10 @@ function LoginForm() {
 
         {message && (
           <p
-            className={`text-sm rounded-lg p-3 border ${
+            className={`text-sm rounded-xl p-3 border ${
               message.includes('Check your email')
-                ? 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30'
-                : 'text-red-300 bg-red-500/10 border-red-500/30'
+                ? 'text-teal-300 bg-teal-500/10 border-teal-500/25'
+                : 'text-red-300 bg-red-500/10 border-red-500/25'
             }`}
           >
             {message}
@@ -176,7 +168,7 @@ function LoginForm() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full min-h-11 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white font-medium transition-colors"
+          className="w-full min-h-11 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-60 text-white font-medium transition-colors"
         >
           {isSubmitting ? 'Signing in…' : mode === 'password' ? 'Sign in' : 'Send magic link'}
         </button>
@@ -184,10 +176,10 @@ function LoginForm() {
 
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-slate-800" />
+          <div className="w-full border-t border-white/[0.06]" />
         </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-slate-950 px-2 text-slate-500">Or</span>
+        <div className="relative flex justify-center text-xs uppercase tracking-wide">
+          <span className="bg-zinc-950 px-2 text-zinc-500">Or</span>
         </div>
       </div>
 
@@ -195,14 +187,14 @@ function LoginForm() {
         type="button"
         onClick={handleGitHubSignIn}
         disabled={isSubmitting}
-        className="w-full min-h-11 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white font-medium transition-colors"
+        className="w-full min-h-11 rounded-xl border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.04] disabled:opacity-60 text-white font-medium transition-colors"
       >
         Continue with GitHub
       </button>
 
-      <p className="text-center text-sm text-slate-400">
+      <p className="text-center text-sm text-zinc-400">
         No account yet?{' '}
-        <Link href="/signup" className="text-emerald-400 hover:text-emerald-300 font-medium">
+        <Link href="/signup" className="text-teal-400 hover:text-teal-300 font-medium">
           Create one
         </Link>
       </p>
@@ -212,12 +204,14 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <main className="flex-1 bg-slate-950 text-slate-100 flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-900/40 p-6 sm:p-8">
-        <Suspense fallback={<p className="text-slate-400 text-center">Loading…</p>}>
-          <LoginForm />
-        </Suspense>
-      </div>
+    <main className="flex-1 flex items-center justify-center py-12">
+      <PageContainer narrow>
+        <SurfaceCard className="p-6 sm:p-8">
+          <Suspense fallback={<p className="text-zinc-400 text-center">Loading…</p>}>
+            <LoginForm />
+          </Suspense>
+        </SurfaceCard>
+      </PageContainer>
     </main>
   );
 }

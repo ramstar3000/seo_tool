@@ -79,9 +79,24 @@ npm run dev
 - **Health check:** `GET /api/health` — `{ ok, supabase, anthropic }` for deploy verification
 - **Manual optimize trigger:** `curl -X POST http://localhost:3000/api/optimize`
 
-### 5. Deploy to Vercel
+### 5. Deploy to Fly.io (recommended)
 
-Link the repository to Vercel and add the same environment variables. A cron job in `vercel.json` fires `/api/optimize` every 15 minutes in production.
+See **[docs/FLY_DEPLOY.md](docs/FLY_DEPLOY.md)** for the full guide.
+
+```bash
+# Install Fly CLI: https://fly.io/docs/flyctl/install/
+fly auth login
+fly apps create synapsecro          # first time only
+fly secrets import < .env
+fly secrets set CRON_SECRET="$(openssl rand -hex 32)"
+fly deploy
+```
+
+Health check: `curl https://synapsecro.fly.dev/api/health`
+
+**Cron jobs:** Vercel crons do not apply on Fly. Use `.github/workflows/fly-cron.yml` (set `FLY_APP_URL` + `CRON_SECRET` in GitHub secrets) or an external cron hitting `/api/optimize` with `Authorization: Bearer $CRON_SECRET`.
+
+**Alternative:** Vercel — link the repo and add env vars; `vercel.json` fires `/api/optimize` every 15 minutes.
 
 ---
 

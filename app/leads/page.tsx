@@ -6,6 +6,7 @@ import { CardGridSkeleton, TableSkeleton } from '@/components/LoadingSkeleton';
 import { SeoBestPracticesPanel } from '@/components/SeoBestPracticesPanel';
 import { SocialPresencePanel } from '@/components/SocialPresencePanel';
 import { useToast } from '@/components/Toast';
+import { PageContainer, SurfaceCard } from '@/components/ui/PageContainer';
 import { getMatchingPractices } from '@/lib/seo/best-practices';
 import type { Lead, LeadStatus } from '@/lib/leads/types';
 import type { SocialPresenceSnapshot } from '@/lib/research/types';
@@ -18,24 +19,27 @@ interface AnalyzeState {
   [leadId: string]: 'loading' | 'done' | 'error';
 }
 
+const selectClass =
+  'min-h-10 px-3 rounded-xl bg-zinc-950/80 border border-white/[0.08] text-sm text-zinc-200 focus:border-teal-500/40 focus:outline-none focus:ring-2 focus:ring-teal-500/20';
+
 function AuditStatusBadge({ status, auditId }: { status: string; auditId?: string | null }) {
   const styles =
     status === 'completed'
-      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+      ? 'bg-teal-500/10 text-teal-300 border-teal-500/25'
       : status === 'running' || status === 'pending'
-        ? 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+        ? 'bg-teal-500/10 text-teal-300 border-teal-500/25'
         : status === 'failed'
-          ? 'bg-red-500/15 text-red-300 border-red-500/30'
-          : 'bg-violet-500/15 text-violet-300 border-violet-500/30';
+          ? 'bg-red-500/10 text-red-300 border-red-500/25'
+          : 'bg-white/[0.04] text-zinc-400 border-white/[0.08]';
 
   const label =
     status === 'completed'
       ? 'Audited'
       : status === 'failed'
-        ? 'Audit failed'
+        ? 'Failed'
         : status === 'running' || status === 'pending'
-          ? 'Analyzing…'
-          : `Audit: ${status}`;
+          ? 'Running'
+          : status;
 
   if (auditId && status === 'completed') {
     return (
@@ -58,8 +62,8 @@ function AuditStatusBadge({ status, auditId }: { status: string; auditId?: strin
 function RankBadge({ rank }: { rank: 3 | 4 }) {
   const styles =
     rank === 3
-      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-      : 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+      ? 'bg-teal-500/10 text-teal-300 border-teal-500/25'
+      : 'bg-amber-500/10 text-amber-300 border-amber-500/25';
 
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border ${styles}`}>
@@ -269,350 +273,316 @@ export default function LeadsPage() {
   };
 
   return (
-    <main className="flex-1 bg-slate-950 text-slate-100">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
-        <div className="grid gap-10 lg:grid-cols-[1fr_20rem] xl:grid-cols-[1fr_22rem]">
+    <main className="flex-1">
+      <PageContainer wide className="py-10 sm:py-14">
+        <div className="grid gap-10 lg:grid-cols-[1fr_18rem] xl:grid-cols-[1fr_20rem]">
           <div className="space-y-8 min-w-0">
-        <header className="space-y-3 border-b border-slate-800 pb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-            London Lead Pipeline — Rank 3 &amp; 4 Prospects
-          </h1>
-          <p className="text-slate-400 text-base sm:text-lg max-w-3xl leading-relaxed">
-            Businesses ranking 3rd or 4th for local keywords are one optimisation push from the top — high-intent
-            prospects where CRO and SEO changes can move the needle fast.
-          </p>
-          <Link
-            href="/seo-guide"
-            className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
-          >
-            Full SEO Guide →
-          </Link>
-        </header>
+            <header className="space-y-2 border-b border-white/[0.06] pb-8">
+              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">Leads</h1>
+              <p className="text-zinc-400 max-w-2xl leading-relaxed">
+                Local businesses ranking #3 or #4 for their keyword — close enough to improve with a
+                focused SEO and landing page pass.
+              </p>
+              <Link
+                href="/seo-guide"
+                className="inline-flex min-h-10 items-center text-sm font-medium text-teal-400 hover:text-teal-300"
+              >
+                SEO guide →
+              </Link>
+            </header>
 
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {isLoading ? (
-            <CardGridSkeleton count={4} cols={4} />
-          ) : (
-            <>
-          <article className="p-5 rounded-xl border border-slate-800 bg-slate-900/50">
-            <p className="text-sm text-slate-400 mb-1">Total leads</p>
-            <p className="text-3xl font-bold tabular-nums">{stats.total}</p>
-          </article>
-          <article className="p-5 rounded-xl border border-slate-800 bg-slate-900/50">
-            <p className="text-sm text-slate-400 mb-1">Rank #3</p>
-            <p className="text-3xl font-bold text-emerald-300 tabular-nums">{stats.rank3}</p>
-          </article>
-          <article className="p-5 rounded-xl border border-slate-800 bg-slate-900/50">
-            <p className="text-sm text-slate-400 mb-1">Rank #4</p>
-            <p className="text-3xl font-bold text-amber-300 tabular-nums">{stats.rank4}</p>
-          </article>
-          <article className="p-5 rounded-xl border border-slate-800 bg-slate-900/50">
-            <p className="text-sm text-slate-400 mb-1">With suggestions</p>
-            <p className="text-3xl font-bold tabular-nums">{stats.withRecs}</p>
-          </article>
-            </>
-          )}
-        </section>
+            <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {isLoading ? (
+                <CardGridSkeleton count={4} cols={4} />
+              ) : (
+                <>
+                  <SurfaceCard className="p-5">
+                    <p className="text-sm text-zinc-400 mb-1">Total</p>
+                    <p className="text-3xl font-semibold tabular-nums">{stats.total}</p>
+                  </SurfaceCard>
+                  <SurfaceCard className="p-5">
+                    <p className="text-sm text-zinc-400 mb-1">Rank #3</p>
+                    <p className="text-3xl font-semibold text-teal-300 tabular-nums">{stats.rank3}</p>
+                  </SurfaceCard>
+                  <SurfaceCard className="p-5">
+                    <p className="text-sm text-zinc-400 mb-1">Rank #4</p>
+                    <p className="text-3xl font-semibold text-amber-300 tabular-nums">{stats.rank4}</p>
+                  </SurfaceCard>
+                  <SurfaceCard className="p-5">
+                    <p className="text-sm text-zinc-400 mb-1">With notes</p>
+                    <p className="text-3xl font-semibold tabular-nums">{stats.withRecs}</p>
+                  </SurfaceCard>
+                </>
+              )}
+            </section>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={handleDiscover}
-            disabled={isDiscovering}
-            className="inline-flex min-h-11 items-center px-5 py-2.5 rounded-lg bg-emerald-500 text-slate-950 font-semibold hover:bg-emerald-400 disabled:opacity-60 transition-colors"
-          >
-            {isDiscovering ? 'Running discovery…' : 'Run Discovery'}
-          </button>
-          {/* API download endpoint — not a navigable page */}
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          <a
-            href="/api/leads/export"
-            className="inline-flex min-h-11 items-center px-4 py-2.5 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800/60 text-sm font-medium transition-colors"
-          >
-            Export JSON
-          </a>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleDiscover}
+                disabled={isDiscovering}
+                className="inline-flex min-h-10 items-center px-5 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-60 text-white text-sm font-medium transition-colors"
+              >
+                {isDiscovering ? 'Finding leads…' : 'Find leads'}
+              </button>
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+              <a
+                href="/api/leads/export"
+                className="inline-flex min-h-10 items-center px-4 rounded-xl border border-white/[0.08] text-zinc-300 hover:bg-white/[0.04] text-sm font-medium transition-colors"
+              >
+                Export JSON
+              </a>
 
-          <select
-            value={rankFilter}
-            onChange={(e) => {
-              setIsLoading(true);
-              setRankFilter(e.target.value as 'all' | '3' | '4');
-            }}
-            className="min-h-11 px-3 rounded-lg bg-slate-900 border border-slate-700 text-sm"
-            aria-label="Filter by rank"
-          >
-            <option value="all">All ranks</option>
-            <option value="3">Rank #3</option>
-            <option value="4">Rank #4</option>
-          </select>
+              <select
+                value={rankFilter}
+                onChange={(e) => {
+                  setIsLoading(true);
+                  setRankFilter(e.target.value as 'all' | '3' | '4');
+                }}
+                className={selectClass}
+                aria-label="Filter by rank"
+              >
+                <option value="all">All ranks</option>
+                <option value="3">Rank #3</option>
+                <option value="4">Rank #4</option>
+              </select>
 
-          <select
-            value={categoryFilter}
-            onChange={(e) => {
-              setIsLoading(true);
-              setCategoryFilter(e.target.value);
-            }}
-            className="min-h-11 px-3 rounded-lg bg-slate-900 border border-slate-700 text-sm"
-            aria-label="Filter by category"
-          >
-            <option value="all">All categories</option>
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-        </div>
+              <select
+                value={categoryFilter}
+                onChange={(e) => {
+                  setIsLoading(true);
+                  setCategoryFilter(e.target.value);
+                }}
+                className={selectClass}
+                aria-label="Filter by category"
+              >
+                <option value="all">All categories</option>
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        {error && (
-          <p className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm">{error}</p>
-        )}
+            {error && (
+              <p className="p-4 rounded-xl bg-red-500/10 border border-red-500/25 text-red-300 text-sm">{error}</p>
+            )}
 
-        {isLoading ? (
-          <TableSkeleton rows={6} cols={8} />
-        ) : (
-        <section className="rounded-xl border border-slate-800 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-slate-900/80 text-left text-slate-400 border-b border-slate-800">
-                  <th className="px-4 py-3 font-medium">Business</th>
-                  <th className="px-4 py-3 font-medium">Category</th>
-                  <th className="px-4 py-3 font-medium">Keyword</th>
-                  <th className="px-4 py-3 font-medium">Rank</th>
-                  <th className="px-4 py-3 font-medium">Location</th>
-                  <th className="px-4 py-3 font-medium">Score</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {leads.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
-                      No leads yet. Click &quot;Run Discovery&quot; to seed 30 London prospects.
-                    </td>
-                  </tr>
-                ) : (
-                  leads.map((lead) => {
-                    const isExpanded = expandedId === lead.id;
-                    const practices = getMatchingPractices(lead, 3);
-                    const hasSuggestions = Boolean(lead.recommendation) || practices.length > 0;
-                    return (
-                      <Fragment key={lead.id}>
-                        <tr className="border-b border-slate-800/80 hover:bg-slate-900/30">
-                          <td className="px-4 py-3">
-                            <div className="font-medium text-white flex flex-wrap items-center gap-2">
-                              {lead.business_name}
-                              {(lead.audit_status || lead.last_audit_id) && (
-                                <AuditStatusBadge
-                                  status={lead.audit_status ?? 'completed'}
-                                  auditId={lead.last_audit_id}
-                                />
-                              )}
-                            </div>
-                            {lead.website_url ? (
-                              <a
-                                href={lead.website_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-emerald-400 hover:underline"
-                              >
-                                Website
-                              </a>
-                            ) : (
-                              <span className="text-xs text-slate-500">No website</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-slate-300 capitalize">{lead.category ?? '—'}</td>
-                          <td className="px-4 py-3 text-slate-400">{lead.keyword}</td>
-                          <td className="px-4 py-3">
-                            <RankBadge rank={lead.rank_position} />
-                          </td>
-                          <td className="px-4 py-3 text-slate-300">{lead.location}</td>
-                          <td className="px-4 py-3 tabular-nums text-slate-300">{lead.lead_score}</td>
-                          <td className="px-4 py-3">
-                            <select
-                              value={lead.status}
-                              onChange={(e) => handleStatusChange(lead.id, e.target.value as LeadStatus)}
-                              className="px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
-                              aria-label={`Status for ${lead.business_name}`}
-                            >
-                              {STATUS_OPTIONS.map((s) => (
-                                <option key={s} value={s}>
-                                  {s}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="px-4 py-3 space-y-1">
-                            {hasSuggestions ? (
-                              <button
-                                type="button"
-                                onClick={() => void handleToggleExpand(lead.id)}
-                                className="block text-xs font-medium text-blue-300 hover:text-blue-200 underline underline-offset-2"
-                              >
-                                {isExpanded ? 'Hide' : 'Suggested actions'}
-                              </button>
-                            ) : leadAudits[lead.id] ? (
-                              <button
-                                type="button"
-                                onClick={() => void handleToggleExpand(lead.id)}
-                                className="block text-xs font-medium text-violet-300 hover:text-violet-200 underline underline-offset-2"
-                              >
-                                {isExpanded ? 'Hide' : 'Social presence'}
-                              </button>
-                            ) : (
-                              <span className="block text-xs text-slate-500">—</span>
-                            )}
-                            {lead.website_url ? (
-                              <div className="flex flex-col gap-1">
-                                {(lead.last_audit_id || leadAudits[lead.id]) &&
-                                (lead.audit_status === 'completed' ||
-                                  leadAudits[lead.id]?.status === 'completed') ? (
-                                  <Link
-                                    href={`/research/${lead.last_audit_id ?? leadAudits[lead.id].auditId}`}
-                                    className="text-xs font-medium text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
-                                  >
-                                    View audit
-                                  </Link>
-                                ) : lead.audit_status === 'failed' || leadAudits[lead.id]?.status === 'failed' ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleAnalyze(lead)}
-                                    disabled={analyzeState[lead.id] === 'loading'}
-                                    className="text-xs font-medium text-red-300 hover:text-red-200 underline underline-offset-2 disabled:opacity-60 text-left"
-                                  >
-                                    {analyzeState[lead.id] === 'loading' ? 'Retrying…' : 'Retry analyze'}
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleAnalyze(lead)}
-                                    disabled={analyzeState[lead.id] === 'loading'}
-                                    className="text-xs font-medium text-violet-300 hover:text-violet-200 underline underline-offset-2 disabled:opacity-60 text-left"
-                                  >
-                                    {analyzeState[lead.id] === 'loading'
-                                      ? 'Analyzing…'
-                                      : analyzeState[lead.id] === 'error'
-                                        ? 'Retry analyze'
-                                        : 'Analyze'}
-                                  </button>
-                                )}
-                              </div>
-                            ) : (
-                              <span
-                                className="text-xs text-slate-500"
-                                title="Add a website URL to run an audit"
-                              >
-                                No website
-                              </span>
-                            )}
+            {isLoading ? (
+              <TableSkeleton rows={6} cols={8} />
+            ) : (
+              <SurfaceCard className="overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-white/[0.02] text-left text-zinc-400 border-b border-white/[0.06]">
+                        <th className="px-4 py-3 font-medium">Business</th>
+                        <th className="px-4 py-3 font-medium">Category</th>
+                        <th className="px-4 py-3 font-medium">Keyword</th>
+                        <th className="px-4 py-3 font-medium">Rank</th>
+                        <th className="px-4 py-3 font-medium">Location</th>
+                        <th className="px-4 py-3 font-medium">Score</th>
+                        <th className="px-4 py-3 font-medium">Status</th>
+                        <th className="px-4 py-3 font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {leads.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="px-4 py-10 text-center text-zinc-500">
+                            No leads yet. Click &quot;Find leads&quot; to load London prospects.
                           </td>
                         </tr>
-                        {isExpanded && (hasSuggestions || leadAudits[lead.id]) && (
-                          <tr className="bg-slate-900/50 border-b border-slate-800">
-                            <td colSpan={8} className="px-4 py-4 space-y-4">
-                              {lead.recommendation && (
-                                <div>
-                                  <p className="text-xs font-semibold text-blue-300 mb-1">
-                                    Tailored suggestion
-                                  </p>
-                                  <p className="text-sm text-slate-300 leading-relaxed max-w-4xl">
-                                    {lead.recommendation}
-                                  </p>
-                                </div>
-                              )}
-                              {practices.length > 0 && (
-                                <div>
-                                  <p className="text-xs font-semibold text-emerald-300 mb-2">
-                                    SEO best practices
-                                  </p>
-                                  <ul className="space-y-2 max-w-4xl">
-                                    {practices.map((p) => (
-                                      <li
-                                        key={p.id}
-                                        className="text-sm text-slate-300 leading-relaxed"
-                                      >
-                                        <span className="font-medium text-white">{p.title}</span>
-                                        <span className="text-slate-500"> ({p.category})</span>
-                                        {' — '}
-                                        {p.description}
-                                        <span className="block text-xs text-slate-500 mt-0.5">
-                                          Source: {p.source}
-                                        </span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                  <Link
-                                    href="/seo-guide"
-                                    className="inline-block mt-2 text-xs text-emerald-400 hover:underline"
+                      ) : (
+                        leads.map((lead) => {
+                          const isExpanded = expandedId === lead.id;
+                          const practices = getMatchingPractices(lead, 3);
+                          const hasSuggestions = Boolean(lead.recommendation) || practices.length > 0;
+                          return (
+                            <Fragment key={lead.id}>
+                              <tr className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                                <td className="px-4 py-3">
+                                  <div className="font-medium text-white flex flex-wrap items-center gap-2">
+                                    {lead.business_name}
+                                    {(lead.audit_status || lead.last_audit_id) && (
+                                      <AuditStatusBadge
+                                        status={lead.audit_status ?? 'completed'}
+                                        auditId={lead.last_audit_id}
+                                      />
+                                    )}
+                                  </div>
+                                  {lead.website_url ? (
+                                    <a
+                                      href={lead.website_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs text-teal-400 hover:underline"
+                                    >
+                                      Website
+                                    </a>
+                                  ) : (
+                                    <span className="text-xs text-zinc-500">No website</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-zinc-300 capitalize">{lead.category ?? '—'}</td>
+                                <td className="px-4 py-3 text-zinc-400">{lead.keyword}</td>
+                                <td className="px-4 py-3">
+                                  <RankBadge rank={lead.rank_position} />
+                                </td>
+                                <td className="px-4 py-3 text-zinc-300">{lead.location}</td>
+                                <td className="px-4 py-3 tabular-nums text-zinc-300">{lead.lead_score}</td>
+                                <td className="px-4 py-3">
+                                  <select
+                                    value={lead.status}
+                                    onChange={(e) => handleStatusChange(lead.id, e.target.value as LeadStatus)}
+                                    className="px-2 py-1 rounded-lg bg-zinc-950/80 border border-white/[0.08] text-xs"
+                                    aria-label={`Status for ${lead.business_name}`}
                                   >
-                                    View full SEO guide
-                                  </Link>
-                                </div>
+                                    {STATUS_OPTIONS.map((s) => (
+                                      <option key={s} value={s}>
+                                        {s}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </td>
+                                <td className="px-4 py-3 space-y-1">
+                                  {hasSuggestions || leadAudits[lead.id] ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => void handleToggleExpand(lead.id)}
+                                      className="block text-xs font-medium text-teal-400 hover:text-teal-300"
+                                    >
+                                      {isExpanded ? 'Hide details' : 'View details'}
+                                    </button>
+                                  ) : (
+                                    <span className="block text-xs text-zinc-500">—</span>
+                                  )}
+                                  {lead.website_url ? (
+                                    <div className="flex flex-col gap-1">
+                                      {(lead.last_audit_id || leadAudits[lead.id]) &&
+                                      (lead.audit_status === 'completed' ||
+                                        leadAudits[lead.id]?.status === 'completed') ? (
+                                        <Link
+                                          href={`/research/${lead.last_audit_id ?? leadAudits[lead.id].auditId}`}
+                                          className="text-xs font-medium text-teal-400 hover:text-teal-300"
+                                        >
+                                          View audit
+                                        </Link>
+                                      ) : lead.audit_status === 'failed' || leadAudits[lead.id]?.status === 'failed' ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleAnalyze(lead)}
+                                          disabled={analyzeState[lead.id] === 'loading'}
+                                          className="text-xs font-medium text-red-300 hover:text-red-200 disabled:opacity-60 text-left"
+                                        >
+                                          {analyzeState[lead.id] === 'loading' ? 'Retrying…' : 'Retry audit'}
+                                        </button>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleAnalyze(lead)}
+                                          disabled={analyzeState[lead.id] === 'loading'}
+                                          className="text-xs font-medium text-zinc-400 hover:text-zinc-300 disabled:opacity-60 text-left"
+                                        >
+                                          {analyzeState[lead.id] === 'loading'
+                                            ? 'Running audit…'
+                                            : analyzeState[lead.id] === 'error'
+                                              ? 'Retry audit'
+                                              : 'Run audit'}
+                                        </button>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs text-zinc-500" title="Add a website URL to run an audit">
+                                      No website
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                              {isExpanded && (hasSuggestions || leadAudits[lead.id]) && (
+                                <tr className="bg-white/[0.01] border-b border-white/[0.04]">
+                                  <td colSpan={8} className="px-4 py-4 space-y-4">
+                                    {lead.recommendation && (
+                                      <div>
+                                        <p className="text-xs font-medium text-zinc-400 mb-1">Suggested next step</p>
+                                        <p className="text-sm text-zinc-300 leading-relaxed max-w-4xl">
+                                          {lead.recommendation}
+                                        </p>
+                                      </div>
+                                    )}
+                                    {practices.length > 0 && (
+                                      <div>
+                                        <p className="text-xs font-medium text-zinc-400 mb-2">Matching SEO fixes</p>
+                                        <ul className="space-y-2 max-w-4xl">
+                                          {practices.map((p) => (
+                                            <li key={p.id} className="text-sm text-zinc-300 leading-relaxed">
+                                              <span className="font-medium text-white">{p.title}</span>
+                                              <span className="text-zinc-500"> ({p.category})</span>
+                                              {' — '}
+                                              {p.description}
+                                            </li>
+                                          ))}
+                                        </ul>
+                                        <Link
+                                          href="/seo-guide"
+                                          className="inline-block mt-2 text-xs text-teal-400 hover:underline"
+                                        >
+                                          Full SEO guide
+                                        </Link>
+                                      </div>
+                                    )}
+                                    {lead.address && (
+                                      <p className="text-xs text-zinc-500">{lead.address}</p>
+                                    )}
+                                    {(socialByLead[lead.id] || socialLoadingId === lead.id || leadAudits[lead.id]) && (
+                                      <div>
+                                        <p className="text-xs font-medium text-zinc-400 mb-2">
+                                          Social &amp; directory profiles
+                                        </p>
+                                        {socialLoadingId === lead.id ? (
+                                          <p className="text-xs text-zinc-500">Loading…</p>
+                                        ) : socialByLead[lead.id] ? (
+                                          <SocialPresencePanel
+                                            compact
+                                            profiles={socialByLead[lead.id]!.profiles.map((p) => ({
+                                              platform_id: p.platform_id,
+                                              platform_name: p.platform_name,
+                                              status: p.status,
+                                              profile_url: p.profile_url,
+                                              bio_text: p.bio_text,
+                                            }))}
+                                            inconsistencies={socialByLead[lead.id]!.inconsistencies}
+                                            searched={socialByLead[lead.id]!.searched}
+                                          />
+                                        ) : leadAudits[lead.id] ? (
+                                          <p className="text-xs text-zinc-500">No profile data in audit.</p>
+                                        ) : null}
+                                      </div>
+                                    )}
+                                  </td>
+                                </tr>
                               )}
-                              {lead.address && (
-                                <p className="text-xs text-slate-500">{lead.address}</p>
-                              )}
-                              {(socialByLead[lead.id] || socialLoadingId === lead.id || leadAudits[lead.id]) && (
-                                <div>
-                                  <p className="text-xs font-semibold text-violet-300 mb-2">
-                                    Social &amp; directory presence
-                                  </p>
-                                  {socialLoadingId === lead.id ? (
-                                    <p className="text-xs text-slate-500">Loading social summary…</p>
-                                  ) : socialByLead[lead.id] ? (
-                                    <SocialPresencePanel
-                                      compact
-                                      profiles={socialByLead[lead.id]!.profiles.map((p) => ({
-                                        platform_id: p.platform_id,
-                                        platform_name: p.platform_name,
-                                        status: p.status,
-                                        profile_url: p.profile_url,
-                                        bio_text: p.bio_text,
-                                      }))}
-                                      inconsistencies={socialByLead[lead.id]!.inconsistencies}
-                                      searched={socialByLead[lead.id]!.searched}
-                                    />
-                                  ) : leadAudits[lead.id] ? (
-                                    <p className="text-xs text-slate-500">No social profile data in audit.</p>
-                                  ) : null}
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        )}
-                      </Fragment>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-        )}
+                            </Fragment>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </SurfaceCard>
+            )}
 
-        <p className="text-sm text-slate-500">
-          Demo mode loads 30 seeded London businesses when no SerpAPI key is set.{' '}
-          <Link href="/seo-guide" className="text-emerald-400 hover:underline">
-            SEO best practices guide
-          </Link>
-          {' · '}
-          <Link href="/dashboard" className="text-emerald-400 hover:underline">
-            Activity dashboard
-          </Link>
-        </p>
-          </div>
-
-          <div className="lg:sticky lg:top-24 lg:self-start space-y-4">
-            <SeoBestPracticesPanel compact defaultOpen={false} />
-            <p className="text-xs text-slate-500 leading-relaxed px-1">
-              Expand a lead&apos;s suggested actions to see 2–3 matching practices from this list.
+            <p className="text-sm text-zinc-500">
+              Without a SerpAPI key, demo mode loads 30 seeded London businesses.
             </p>
           </div>
+
+          <div className="lg:sticky lg:top-24 lg:self-start">
+            <SeoBestPracticesPanel compact defaultOpen={false} />
+          </div>
         </div>
-      </div>
+      </PageContainer>
     </main>
   );
 }

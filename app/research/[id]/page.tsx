@@ -5,18 +5,19 @@ import { useEffect, useMemo, useState } from 'react';
 import { LinkedRepositoriesPanel } from '@/components/LinkedRepositoriesPanel';
 import { ReportSkeleton } from '@/components/LoadingSkeleton';
 import { SocialPresencePanel } from '@/components/SocialPresencePanel';
+import { PageContainer, SurfaceCard } from '@/components/ui/PageContainer';
 import type { AuditDetail } from '@/lib/research/persist';
 
 function SeverityBadge({ severity }: { severity: string }) {
   const styles =
     severity === 'critical'
-      ? 'bg-red-500/15 text-red-300 border-red-500/30'
+      ? 'bg-red-500/10 text-red-300 border-red-500/25'
       : severity === 'warning'
-        ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-        : 'bg-slate-700/50 text-slate-400 border-slate-600/50';
+        ? 'bg-amber-500/10 text-amber-300 border-amber-500/25'
+        : 'bg-white/[0.04] text-zinc-400 border-white/[0.08]';
 
   return (
-    <span className={`inline-flex px-2 py-0.5 rounded border text-xs capitalize ${styles}`}>
+    <span className={`inline-flex px-2 py-0.5 rounded-md border text-xs capitalize ${styles}`}>
       {severity}
     </span>
   );
@@ -83,68 +84,68 @@ export default function ResearchAuditPage({ params }: { params: Promise<{ id: st
 
   if (isLoading) {
     return (
-      <main className="flex-1 bg-slate-950 text-slate-100">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+      <main className="flex-1">
+        <PageContainer className="py-10">
           <ReportSkeleton />
-        </div>
+        </PageContainer>
       </main>
     );
   }
 
   if (error || !audit) {
     return (
-      <main className="flex-1 bg-slate-950 text-slate-100">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 space-y-4">
+      <main className="flex-1">
+        <PageContainer className="py-10 space-y-4">
           <p className="text-red-300" role="alert">{error ?? 'Audit not found'}</p>
-          <Link href="/research" className="text-emerald-400 hover:underline text-sm">
-            ← Back to research
+          <Link href="/research" className="text-teal-400 hover:underline text-sm">
+            ← All audits
           </Link>
-        </div>
+        </PageContainer>
       </main>
     );
   }
 
   return (
-    <main className="flex-1 bg-slate-950 text-slate-100">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-14 space-y-10">
-        <header className="space-y-3 border-b border-slate-800 pb-8">
-          <p className="text-sm text-emerald-400 font-medium">Research audit</p>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white break-words">
+    <main className="flex-1">
+      <PageContainer className="py-10 sm:py-14 space-y-10">
+        <header className="space-y-2 border-b border-white/[0.06] pb-8">
+          <p className="text-sm text-teal-400 font-medium">Research report</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white break-words">
             {audit.business_name}
           </h1>
-          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-sm text-slate-400">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-sm text-zinc-400">
             <span>
-              Keyword: <span className="text-slate-200">{audit.keyword}</span>
+              Keyword: <span className="text-zinc-200">{audit.keyword}</span>
             </span>
             <a
               href={audit.target_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-emerald-400 hover:underline break-all"
+              className="text-teal-400 hover:underline break-all"
             >
               {audit.target_url}
             </a>
           </div>
           <Link
             href="/research"
-            className="inline-flex min-h-11 items-center text-sm font-medium text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
+            className="inline-flex min-h-10 items-center text-sm font-medium text-teal-400 hover:text-teal-300"
           >
             ← All audits
           </Link>
         </header>
 
         {audit.summary && (
-          <section className="p-5 sm:p-6 rounded-xl border border-slate-800 bg-slate-900/40 space-y-3">
-            <h2 className="text-lg font-semibold text-white">Executive summary</h2>
-            <p className="text-slate-300 leading-relaxed">{audit.summary}</p>
-          </section>
+          <SurfaceCard className="p-5 sm:p-6 space-y-3">
+            <h2 className="text-lg font-semibold text-white">Summary</h2>
+            <p className="text-zinc-300 leading-relaxed">{audit.summary}</p>
+          </SurfaceCard>
         )}
 
         {audit.recommendations && (
-          <section className="p-5 sm:p-6 rounded-xl border border-emerald-500/20 bg-emerald-500/5 space-y-3">
-            <h2 className="text-lg font-semibold text-emerald-200">Recommendations</h2>
-            <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">{audit.recommendations}</p>
-          </section>
+          <SurfaceCard className="p-5 sm:p-6 space-y-3 border-teal-500/20 bg-teal-500/[0.03]">
+            <h2 className="text-lg font-semibold text-teal-200">Recommended fixes</h2>
+            <p className="text-zinc-300 leading-relaxed whitespace-pre-wrap">{audit.recommendations}</p>
+          </SurfaceCard>
         )}
 
         {seoFindings.length > 0 && (
@@ -152,14 +153,11 @@ export default function ResearchAuditPage({ params }: { params: Promise<{ id: st
             <h2 className="text-lg font-semibold text-white">SEO &amp; technical</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {seoFindings.map((finding) => (
-                <article
-                  key={finding.id}
-                  className="p-4 rounded-xl border border-slate-800 bg-slate-900/30 space-y-2"
-                >
+                <SurfaceCard key={finding.id} className="p-4 space-y-2">
                   <SeverityBadge severity={finding.severity} />
                   <h3 className="font-medium text-white">{finding.title}</h3>
-                  <p className="text-sm text-slate-300 leading-relaxed">{finding.description}</p>
-                </article>
+                  <p className="text-sm text-zinc-300 leading-relaxed">{finding.description}</p>
+                </SurfaceCard>
               ))}
             </div>
           </section>
@@ -167,7 +165,7 @@ export default function ResearchAuditPage({ params }: { params: Promise<{ id: st
 
         <section className="space-y-4">
           <h2 className="text-lg font-semibold text-white">Social &amp; directory presence</h2>
-          <div className="p-5 rounded-xl border border-slate-800 bg-slate-900/40">
+          <SurfaceCard className="p-5">
             <SocialPresencePanel
               profiles={
                 audit.socialProfiles.length > 0
@@ -183,23 +181,23 @@ export default function ResearchAuditPage({ params }: { params: Promise<{ id: st
               inconsistencies={socialInconsistencies}
               searched={audit.socialPresence?.searched ?? false}
             />
-          </div>
+          </SurfaceCard>
         </section>
 
         {audit.competitors.length > 0 && (
           <section className="space-y-4">
-            <h2 className="text-lg font-semibold text-white">Competitors</h2>
-            <ul className="rounded-xl border border-slate-800 divide-y divide-slate-800/80 overflow-hidden">
+            <h2 className="text-lg font-semibold text-white">Nearby competitors</h2>
+            <SurfaceCard className="divide-y divide-white/[0.06] overflow-hidden">
               {audit.competitors.map((c) => (
-                <li key={c.id} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-sm bg-slate-900/30">
-                  <span className="text-slate-500 font-mono text-xs">#{c.rank_position}</span>
-                  <a href={c.url} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline">
+                <div key={c.id} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-sm">
+                  <span className="text-zinc-500 font-mono text-xs">#{c.rank_position}</span>
+                  <a href={c.url} target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline">
                     {c.business_name}
                   </a>
-                  {c.snippet && <span className="text-slate-500 text-xs sm:ml-auto truncate max-w-md">{c.snippet}</span>}
-                </li>
+                  {c.snippet && <span className="text-zinc-500 text-xs sm:ml-auto truncate max-w-md">{c.snippet}</span>}
+                </div>
               ))}
-            </ul>
+            </SurfaceCard>
           </section>
         )}
 
@@ -208,17 +206,14 @@ export default function ResearchAuditPage({ params }: { params: Promise<{ id: st
             <h2 className="text-lg font-semibold text-white">Other findings</h2>
             <div className="space-y-3">
               {otherFindings.map((finding) => (
-                <article
-                  key={finding.id}
-                  className="p-4 rounded-xl border border-slate-800 bg-slate-900/30 space-y-2"
-                >
+                <SurfaceCard key={finding.id} className="p-4 space-y-2">
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     <SeverityBadge severity={finding.severity} />
-                    <span className="text-slate-500 capitalize">{finding.category}</span>
+                    <span className="text-zinc-500 capitalize">{finding.category}</span>
                   </div>
                   <h3 className="font-medium text-white">{finding.title}</h3>
-                  <p className="text-sm text-slate-300 leading-relaxed">{finding.description}</p>
-                </article>
+                  <p className="text-sm text-zinc-300 leading-relaxed">{finding.description}</p>
+                </SurfaceCard>
               ))}
             </div>
           </section>
@@ -233,7 +228,7 @@ export default function ResearchAuditPage({ params }: { params: Promise<{ id: st
             />
           </section>
         )}
-      </div>
+      </PageContainer>
     </main>
   );
 }

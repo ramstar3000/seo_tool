@@ -5,7 +5,7 @@ import { buildOptimizePrompt } from '@/lib/llm/optimize-prompt';
 import { runOptimizationLLM } from '@/lib/llm/providers';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 async function runOptimization() {
   const supabase = getSupabaseAdmin();

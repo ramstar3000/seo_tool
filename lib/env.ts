@@ -48,6 +48,7 @@ export function getResendFromEmail(): string {
 
 export function getAppBaseUrl(): string {
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
+  if (process.env.FLY_APP_NAME) return `https://${process.env.FLY_APP_NAME}.fly.dev`;
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
   return 'http://localhost:3000';
 }
@@ -58,4 +59,8 @@ export function hasSupabaseConfig(): boolean {
 
 export function hasAnthropicConfig(): boolean {
   return Boolean(getAnthropicApiKey());
+}
+
+export function hasResendConfig(): boolean {
+  return Boolean(getResendApiKey());
 }
