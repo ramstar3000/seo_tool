@@ -51,6 +51,8 @@ cp .env.local.example .env.local
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role key (server-side writes only) |
 | `ANTHROPIC_API_KEY` | Anthropic API key for the CRO agent |
 | `CRON_SECRET` | Optional bearer token for manual `/api/optimize` triggers (Vercel cron uses `x-vercel-cron`) |
+| `RESEND_API_KEY` | Optional — sends “Your audit is ready” email when visitor audits complete |
+| `NEXT_PUBLIC_APP_URL` | Optional — base URL for audit emails (defaults to Vercel URL or localhost) |
 
 ### 3. Authentication (Supabase)
 
@@ -71,8 +73,10 @@ npm run dev
 ```
 
 - **Landing page:** [http://localhost:3000](http://localhost:3000) — request a free audit via the CTA modal
-- **Visitor audit:** `/audit/{requestId}` — public report for free audit requests
+- **Visitor audit:** `/audit/{requestId}` — public report with score, findings, competitors, and social presence
+- **Lead pipeline:** [http://localhost:3000/leads](http://localhost:3000/leads) — discover London rank-3/4 prospects with auto-research
 - **Agent dashboard:** [http://localhost:3000/dashboard](http://localhost:3000/dashboard) — live brain log stream
+- **Health check:** `GET /api/health` — `{ ok, supabase, anthropic }` for deploy verification
 - **Manual optimize trigger:** `curl -X POST http://localhost:3000/api/optimize`
 
 ### 5. Deploy to Vercel
@@ -86,18 +90,21 @@ Link the repository to Vercel and add the same environment variables. A cron job
 ```
 app/
 ├── page.tsx                  # Public landing page + free audit modal
-├── audit/[id]/page.tsx       # Visitor-facing audit report
+├── audit/[id]/page.tsx       # Visitor-facing audit report (score, findings, CTA)
+├── leads/page.tsx            # London lead pipeline + analyze
+├── research/                 # Full research audit list + detail
 ├── dashboard/page.tsx        # Showroom analytical dashboard
 └── api/
     ├── analytics/route.ts    # Rate-limited analytics writes
     ├── audit-request/        # Free visitor audit flow
+    ├── health/route.ts       # Deploy health check
     └── optimize/route.ts     # Edge CRO agent (LLM evaluation loop)
 lib/
+├── audit/                    # Visitor audit processing + scoring
+├── email/send-audit-complete.ts  # Optional Resend notification
+├── leads/auto-research.ts    # Auto-queue audits after discovery
 ├── rate-limit.ts             # In-memory sliding-window rate limiter
 └── prompts/visitor-audit.ts  # Editable visitor report prompt
-docs/GITHUB_OAUTH_SETUP.md    # GitHub OAuth setup guide
-supabase/schema.sql           # Database schema + RLS + Realtime
-vercel.json                   # 15-minute autonomous cron
 ```
 
 ---
@@ -105,10 +112,11 @@ vercel.json                   # 15-minute autonomous cron
 ## 🧪 Verification Sequence
 
 1. Run `npm run dev` and open the home page — confirm a `page_view` row appears in `analytics_events` (via `/api/analytics`).
-2. Submit the free audit modal — confirm an `audit_requests` row and visit `/audit/{id}`.
-3. Sign in and run lead discovery — confirm auto-research queues up to 5 audits per run.
-4. Trigger the agent: `curl -X POST http://localhost:3000/api/optimize`
-5. Watch the landing page copy update live (no refresh needed) and new logs appear on `/dashboard`.
+2. Submit the free audit modal — confirm an `audit_requests` row and visit `/audit/{id}` (progress steps → full report).
+3. Check deploy readiness: `curl http://localhost:3000/api/health`
+4. Sign in and run lead discovery — confirm auto-research queues up to 5 audits per run (failed audits show “Audit failed” badge).
+5. Trigger the agent: `curl -X POST http://localhost:3000/api/optimize`
+6. Watch the landing page copy update live (no refresh needed) and new logs appear on `/dashboard`.
 
 ---
 

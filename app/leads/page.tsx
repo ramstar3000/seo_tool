@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import { CardGridSkeleton, TableSkeleton } from '@/components/LoadingSkeleton';
 import { SeoBestPracticesPanel } from '@/components/SeoBestPracticesPanel';
 import { SocialPresencePanel } from '@/components/SocialPresencePanel';
+import { useToast } from '@/components/Toast';
 import { getMatchingPractices } from '@/lib/seo/best-practices';
 import type { Lead, LeadStatus } from '@/lib/leads/types';
 import type { SocialPresenceSnapshot } from '@/lib/research/types';
@@ -26,7 +28,14 @@ function AuditStatusBadge({ status, auditId }: { status: string; auditId?: strin
           ? 'bg-red-500/15 text-red-300 border-red-500/30'
           : 'bg-violet-500/15 text-violet-300 border-violet-500/30';
 
-  const label = status === 'completed' ? 'Audited' : `Audit: ${status}`;
+  const label =
+    status === 'completed'
+      ? 'Audited'
+      : status === 'failed'
+        ? 'Audit failed'
+        : status === 'running' || status === 'pending'
+          ? 'Analyzing…'
+          : `Audit: ${status}`;
 
   if (auditId && status === 'completed') {
     return (
@@ -86,6 +95,7 @@ async function requestLeads(
 }
 
 export default function LeadsPage() {
+  const { showToast } = useToast();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDiscovering, setIsDiscovering] = useState(false);
@@ -119,7 +129,9 @@ export default function LeadsPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load leads');
+          const message = err instanceof Error ? err.message : 'Failed to load leads';
+          setError(message);
+          showToast(message);
           setLeads([]);
         }
       } finally {
@@ -130,7 +142,7 @@ export default function LeadsPage() {
     return () => {
       cancelled = true;
     };
-  }, [rankFilter, categoryFilter]);
+  }, [rankFilter, categoryFilter, showToast]);
 
   const categories = useMemo(() => {
     const set = new Set(leads.map((l) => l.category).filter(Boolean) as string[]);
@@ -159,7 +171,9 @@ export default function LeadsPage() {
       setLeads(data);
       setIsLoading(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Discovery failed');
+      const message = err instanceof Error ? err.message : 'Discovery failed';
+      setError(message);
+      showToast(message);
     } finally {
       setIsDiscovering(false);
     }
@@ -203,11 +217,17 @@ export default function LeadsPage() {
 
     if (response.ok) {
       setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status } : l)));
+    } else {
+      const body = (await response.json()) as { error?: string };
+      showToast(body.error ?? 'Failed to update status');
     }
   };
 
   const handleAnalyze = async (lead: Lead) => {
-    if (!lead.website_url) return;
+    if (!lead.website_url) {
+      showToast('This lead has no website URL to analyze.');
+      return;
+    }
 
     setAnalyzeState((prev) => ({ ...prev, [lead.id]: 'loading' }));
     setError(null);
@@ -237,8 +257,14 @@ export default function LeadsPage() {
       });
       void loadSocialSummary(lead.id);
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Analysis failed';
       setAnalyzeState((prev) => ({ ...prev, [lead.id]: 'error' }));
-      setError(err instanceof Error ? err.message : 'Analysis failed');
+      setError(message);
+      showToast(message);
+      setLeadAudits((prev) => ({
+        ...prev,
+        [lead.id]: { auditId: prev[lead.id]?.auditId ?? '', status: 'failed' },
+      }));
     }
   };
 
@@ -264,22 +290,28 @@ export default function LeadsPage() {
         </header>
 
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {isLoading ? (
+            <CardGridSkeleton count={4} cols={4} />
+          ) : (
+            <>
           <article className="p-5 rounded-xl border border-slate-800 bg-slate-900/50">
             <p className="text-sm text-slate-400 mb-1">Total leads</p>
-            <p className="text-3xl font-bold tabular-nums">{isLoading ? '…' : stats.total}</p>
+            <p className="text-3xl font-bold tabular-nums">{stats.total}</p>
           </article>
           <article className="p-5 rounded-xl border border-slate-800 bg-slate-900/50">
             <p className="text-sm text-slate-400 mb-1">Rank #3</p>
-            <p className="text-3xl font-bold text-emerald-300 tabular-nums">{isLoading ? '…' : stats.rank3}</p>
+            <p className="text-3xl font-bold text-emerald-300 tabular-nums">{stats.rank3}</p>
           </article>
           <article className="p-5 rounded-xl border border-slate-800 bg-slate-900/50">
             <p className="text-sm text-slate-400 mb-1">Rank #4</p>
-            <p className="text-3xl font-bold text-amber-300 tabular-nums">{isLoading ? '…' : stats.rank4}</p>
+            <p className="text-3xl font-bold text-amber-300 tabular-nums">{stats.rank4}</p>
           </article>
           <article className="p-5 rounded-xl border border-slate-800 bg-slate-900/50">
             <p className="text-sm text-slate-400 mb-1">With suggestions</p>
-            <p className="text-3xl font-bold tabular-nums">{isLoading ? '…' : stats.withRecs}</p>
+            <p className="text-3xl font-bold tabular-nums">{stats.withRecs}</p>
           </article>
+            </>
+          )}
         </section>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -336,6 +368,9 @@ export default function LeadsPage() {
           <p className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm">{error}</p>
         )}
 
+        {isLoading ? (
+          <TableSkeleton rows={6} cols={8} />
+        ) : (
         <section className="rounded-xl border border-slate-800 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -352,13 +387,7 @@ export default function LeadsPage() {
                 </tr>
               </thead>
               <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
-                      Loading leads…
-                    </td>
-                  </tr>
-                ) : leads.length === 0 ? (
+                {leads.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
                       No leads yet. Click &quot;Run Discovery&quot; to seed 30 London prospects.
@@ -436,15 +465,26 @@ export default function LeadsPage() {
                             ) : (
                               <span className="block text-xs text-slate-500">—</span>
                             )}
-                            {lead.website_url && (
+                            {lead.website_url ? (
                               <div className="flex flex-col gap-1">
-                                {lead.last_audit_id || leadAudits[lead.id] ? (
+                                {(lead.last_audit_id || leadAudits[lead.id]) &&
+                                (lead.audit_status === 'completed' ||
+                                  leadAudits[lead.id]?.status === 'completed') ? (
                                   <Link
                                     href={`/research/${lead.last_audit_id ?? leadAudits[lead.id].auditId}`}
                                     className="text-xs font-medium text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
                                   >
                                     View audit
                                   </Link>
+                                ) : lead.audit_status === 'failed' || leadAudits[lead.id]?.status === 'failed' ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAnalyze(lead)}
+                                    disabled={analyzeState[lead.id] === 'loading'}
+                                    className="text-xs font-medium text-red-300 hover:text-red-200 underline underline-offset-2 disabled:opacity-60 text-left"
+                                  >
+                                    {analyzeState[lead.id] === 'loading' ? 'Retrying…' : 'Retry analyze'}
+                                  </button>
                                 ) : (
                                   <button
                                     type="button"
@@ -460,6 +500,13 @@ export default function LeadsPage() {
                                   </button>
                                 )}
                               </div>
+                            ) : (
+                              <span
+                                className="text-xs text-slate-500"
+                                title="Add a website URL to run an audit"
+                              >
+                                No website
+                              </span>
                             )}
                           </td>
                         </tr>
@@ -544,6 +591,7 @@ export default function LeadsPage() {
             </table>
           </div>
         </section>
+        )}
 
         <p className="text-sm text-slate-500">
           Demo mode loads 30 seeded London businesses when no SerpAPI key is set.{' '}

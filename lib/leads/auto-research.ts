@@ -21,6 +21,7 @@ export interface AutoResearchResult {
   queued: number;
   skipped: number;
   synced: number;
+  failed: number;
   background: number;
 }
 
@@ -60,8 +61,9 @@ async function runLeadResearch(supabase: SupabaseClient, lead: LeadForResearch):
 
     return 'completed';
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Auto-research failed';
+    console.error(`[auto-research] failed for lead ${lead.id} (${lead.business_name}):`, message);
     if (pendingAuditId) {
-      const message = error instanceof Error ? error.message : 'Auto-research failed';
       await markAuditFailed(supabase, pendingAuditId, message);
     }
     return 'failed';
@@ -114,7 +116,7 @@ export async function queueAutoResearchForLeads(
   insertedLeadIds: string[],
   maxPerRun = MAX_AUTO_RESEARCH_PER_RUN
 ): Promise<AutoResearchResult> {
-  const result: AutoResearchResult = { queued: 0, skipped: 0, synced: 0, background: 0 };
+  const result: AutoResearchResult = { queued: 0, skipped: 0, synced: 0, failed: 0, background: 0 };
 
   const eligible = await collectEligibleLeads(supabase, insertedLeadIds);
   result.queued = eligible.length;
@@ -129,14 +131,26 @@ export async function queueAutoResearchForLeads(
   );
 
   for (const settled of syncResults) {
-    if (settled.status === 'fulfilled' && settled.value === 'completed') {
-      result.synced += 1;
+    if (settled.status === 'fulfilled') {
+      if (settled.value === 'completed') result.synced += 1;
+      else if (settled.value === 'failed') result.failed += 1;
+    } else {
+      result.failed += 1;
+      console.error('[auto-research] sync batch rejected:', settled.reason);
     }
   }
 
   if (backgroundBatch.length > 0) {
-    void Promise.allSettled(backgroundBatch.map((lead) => runLeadResearch(supabase, lead))).catch(
-      (err) => console.error('[auto-research] background batch failed:', err)
+    void Promise.allSettled(backgroundBatch.map((lead) => runLeadResearch(supabase, lead))).then(
+      (results) => {
+        for (const settled of results) {
+          if (settled.status === 'rejected') {
+            console.error('[auto-research] background rejected:', settled.reason);
+          } else if (settled.value === 'failed') {
+            console.error('[auto-research] background audit failed for a lead');
+          }
+        }
+      }
     );
   }
 

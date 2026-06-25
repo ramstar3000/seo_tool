@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { apiError, apiNotConfigured } from '@/lib/api/errors';
 import { processAuditRequest } from '@/lib/audit/process-audit-request';
 import {
   checkRateLimit,
@@ -26,17 +27,14 @@ export async function POST(request: NextRequest) {
 
   const supabase = getSupabaseAdmin();
   if (!supabase) {
-    return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 });
+    return apiNotConfigured('Supabase');
   }
 
   let body: z.infer<typeof auditRequestBodySchema>;
   try {
     body = auditRequestBodySchema.parse(await request.json());
   } catch {
-    return NextResponse.json(
-      { error: 'Valid email and website URL are required' },
-      { status: 400 }
-    );
+    return apiError('Valid email and website URL are required', 400, 'VALIDATION_ERROR');
   }
 
   const { data, error } = await supabase
@@ -51,7 +49,7 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error || !data) {
-    return NextResponse.json({ error: 'Failed to create audit request' }, { status: 500 });
+    return apiError('Failed to create audit request', 500, 'DB_ERROR');
   }
 
   const requestId = data.id as string;

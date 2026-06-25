@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { computeAuditScore } from '@/lib/audit/score';
+import { getVisitorAuditDetail } from '@/lib/audit/process-request';
+import { getAuditById } from '@/lib/research/persist';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
@@ -13,30 +16,66 @@ export async function GET(
   }
 
   const { id } = await context.params;
+  const detail = await getVisitorAuditDetail(supabase, id);
 
-  const { data, error } = await supabase
-    .from('audit_requests')
-    .select('id, email, website_url, business_name, status, site_audit_id, report_summary, created_at')
-    .eq('id', id)
-    .maybeSingle();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  if (!data) {
+  if (!detail) {
     return NextResponse.json({ error: 'Audit request not found' }, { status: 404 });
   }
 
+  const { data: requestRow } = await supabase
+    .from('audit_requests')
+    .select('error_message')
+    .eq('id', id)
+    .maybeSingle();
+
+  const findings = detail.findings ?? [];
+  let score: number | null = null;
+  let competitors: Array<{ rank_position: number; business_name: string; url: string }> = [];
+  let socialProfiles: Array<{
+    platform_id: string;
+    platform_name: string;
+    status: string;
+    profile_url: string | null;
+  }> = [];
+  let pageSpeed = null;
+
+  if (detail.site_audit_id && detail.status === 'completed') {
+    const audit = await getAuditById(supabase, detail.site_audit_id);
+    if (audit) {
+      score = computeAuditScore(audit.findings);
+      competitors = audit.competitors.slice(0, 5).map((c) => ({
+        rank_position: c.rank_position,
+        business_name: c.business_name,
+        url: c.url,
+      }));
+      socialProfiles = audit.socialProfiles.map((p) => ({
+        platform_id: p.platform_id,
+        platform_name: p.platform_name ?? p.platform_id,
+        status: p.status,
+        profile_url: p.profile_url,
+      }));
+      pageSpeed = audit.pageSpeed;
+    }
+  }
+
   return NextResponse.json({
-    id: data.id,
-    email: data.email,
-    websiteUrl: data.website_url,
-    businessName: data.business_name,
-    status: data.status,
-    reportSummary: data.report_summary,
-    createdAt: data.created_at,
-    researchUrl: data.site_audit_id ? `/research/${data.site_audit_id}` : null,
-    siteAuditId: data.site_audit_id,
+    id: detail.id,
+    email: detail.email,
+    websiteUrl: detail.website_url,
+    businessName: detail.business_name,
+    status: detail.status,
+    reportSummary: detail.report_summary,
+    errorMessage: (requestRow?.error_message as string | null) ?? null,
+    createdAt: detail.created_at,
+    researchUrl: detail.site_audit_id ? `/research/${detail.site_audit_id}` : null,
+    siteAuditId: detail.site_audit_id,
+    auditId: detail.site_audit_id,
+    score,
+    findings,
+    competitors,
+    socialProfiles,
+    leadId: detail.lead_id ?? null,
+    addedToPipeline: Boolean(detail.lead_id),
+    pageSpeed,
   });
 }

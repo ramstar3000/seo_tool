@@ -163,12 +163,15 @@ create table public.audit_requests (
   business_name text,
   status text default 'pending' check (status in ('pending', 'processing', 'completed', 'failed')),
   site_audit_id uuid references public.site_audits(id) on delete set null,
+  lead_id uuid references public.leads(id) on delete set null,
   report_summary text,
+  error_message text,
   created_at timestamptz default now()
 );
 
 create index audit_requests_created_at_idx on public.audit_requests (created_at desc);
 create index audit_requests_site_audit_id_idx on public.audit_requests (site_audit_id);
+create index audit_requests_lead_id_idx on public.audit_requests (lead_id);
 
 create index leads_last_audit_id_idx on public.leads (last_audit_id);
 create index linked_repositories_lead_id_idx on public.linked_repositories (lead_id);

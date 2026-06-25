@@ -9,9 +9,36 @@ type CtaState = 'idle' | 'modal' | 'submitting' | 'success';
 const DEFAULT_COPY = {
   hero_title: 'Get more customers from your website',
   hero_subtitle:
-    'SynapseCRO helps local businesses turn visitors into leads with a landing page that improves itself over time.',
+    'SynapseCRO is a self-optimizing landing page for local businesses — it learns from visitor clicks, runs free SEO audits, and improves your copy automatically.',
   cta_text: 'Get a free audit',
 };
+
+function normalizeWebsiteUrl(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return trimmed;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
+function validateAuditForm(email: string, websiteUrl: string): string | null {
+  const trimmedEmail = email.trim();
+  if (!trimmedEmail) return 'Please enter your email address.';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+    return 'Please enter a valid email address.';
+  }
+
+  const normalized = normalizeWebsiteUrl(websiteUrl);
+  try {
+    const parsed = new URL(normalized);
+    if (!parsed.hostname.includes('.')) {
+      return 'Please enter a full website address (e.g. yourbusiness.com).';
+    }
+  } catch {
+    return 'Please enter a valid website URL (e.g. https://yourbusiness.com).';
+  }
+
+  return null;
+}
 
 function hasSupabaseConfig(): boolean {
   return createBrowserSupabaseClient() !== null;
@@ -86,6 +113,13 @@ export default function Home() {
   const handleAuditSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setFormError(null);
+
+    const validationError = validateAuditForm(email, websiteUrl);
+    if (validationError) {
+      setFormError(validationError);
+      return;
+    }
+
     setCtaState('submitting');
 
     try {
@@ -93,8 +127,8 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: email.trim(),
-          websiteUrl: websiteUrl.trim(),
+          email: email.trim().toLowerCase(),
+          websiteUrl: normalizeWebsiteUrl(websiteUrl),
           businessName: businessName.trim() || undefined,
         }),
       });
@@ -130,19 +164,24 @@ export default function Home() {
           <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-xl space-y-5">
             <header className="space-y-1">
               <h2 id="audit-modal-title" className="text-xl font-bold text-white">
-                Get your free audit
+                Get your free website audit
               </h2>
               <p className="text-sm text-slate-400">
-                Enter your details and we&apos;ll analyze your site automatically.
+                We scan your site, check competitors, and review your online presence — results in about 2 minutes.
               </p>
             </header>
 
-            <form onSubmit={(e) => void handleAuditSubmit(e)} className="space-y-4">
+            <form onSubmit={(e) => void handleAuditSubmit(e)} className="space-y-4" noValidate>
               <label className="block space-y-1.5">
-                <span className="text-sm font-medium text-slate-300">Email</span>
+                <span id="audit-email-label" className="text-sm font-medium text-slate-300">
+                  Email address
+                </span>
                 <input
                   type="email"
                   required
+                  aria-labelledby="audit-email-label"
+                  aria-describedby={formError ? 'audit-form-error' : undefined}
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full min-h-11 rounded-lg border border-slate-700 bg-slate-950 px-3 text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:outline-none"
@@ -151,21 +190,29 @@ export default function Home() {
               </label>
 
               <label className="block space-y-1.5">
-                <span className="text-sm font-medium text-slate-300">Website URL</span>
+                <span id="audit-url-label" className="text-sm font-medium text-slate-300">
+                  Website URL
+                </span>
                 <input
                   type="url"
                   required
+                  aria-labelledby="audit-url-label"
+                  autoComplete="url"
                   value={websiteUrl}
                   onChange={(e) => setWebsiteUrl(e.target.value)}
                   className="w-full min-h-11 rounded-lg border border-slate-700 bg-slate-950 px-3 text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:outline-none"
-                  placeholder="https://yourbusiness.com"
+                  placeholder="yourbusiness.com or https://yourbusiness.com"
                 />
               </label>
 
               <label className="block space-y-1.5">
-                <span className="text-sm font-medium text-slate-300">Business name (optional)</span>
+                <span id="audit-name-label" className="text-sm font-medium text-slate-300">
+                  Business name <span className="text-slate-500 font-normal">(optional)</span>
+                </span>
                 <input
                   type="text"
+                  aria-labelledby="audit-name-label"
+                  autoComplete="organization"
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
                   className="w-full min-h-11 rounded-lg border border-slate-700 bg-slate-950 px-3 text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:outline-none"
@@ -174,7 +221,11 @@ export default function Home() {
               </label>
 
               {formError && (
-                <p className="text-sm text-red-300 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+                <p
+                  id="audit-form-error"
+                  role="alert"
+                  className="text-sm text-red-300 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2"
+                >
                   {formError}
                 </p>
               )}
@@ -205,7 +256,7 @@ export default function Home() {
         <div className="max-w-2xl mx-auto space-y-6 sm:space-y-8">
           <p className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" aria-hidden="true" />
-            Built for local business owners
+            Cursor Hackathon — self-optimizing CRO + free audits
           </p>
 
           <div className="space-y-4">

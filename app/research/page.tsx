@@ -2,9 +2,12 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { TableSkeleton } from '@/components/LoadingSkeleton';
+import { useToast } from '@/components/Toast';
 import type { SiteAudit } from '@/lib/research/types';
 
 export default function ResearchListPage() {
+  const { showToast } = useToast();
   const [audits, setAudits] = useState<SiteAudit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,12 +23,14 @@ export default function ResearchListPage() {
         const body = (await response.json()) as { audits: SiteAudit[] };
         setAudits(body.audits);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load audits');
+        const message = err instanceof Error ? err.message : 'Failed to load audits';
+        setError(message);
+        showToast(message);
       } finally {
         setIsLoading(false);
       }
     })();
-  }, []);
+  }, [showToast]);
 
   return (
     <main className="flex-1 bg-slate-950 text-slate-100">
@@ -47,6 +52,9 @@ export default function ResearchListPage() {
           <p className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm">{error}</p>
         )}
 
+        {isLoading ? (
+          <TableSkeleton rows={5} cols={5} />
+        ) : (
         <section className="rounded-xl border border-slate-800 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -60,13 +68,7 @@ export default function ResearchListPage() {
                 </tr>
               </thead>
               <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                      Loading audits…
-                    </td>
-                  </tr>
-                ) : audits.length === 0 ? (
+                {audits.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
                       No audits yet. Run analysis from the leads page.
@@ -99,6 +101,7 @@ export default function ResearchListPage() {
             </table>
           </div>
         </section>
+        )}
       </div>
     </main>
   );

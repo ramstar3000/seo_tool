@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { CardGridSkeleton } from '@/components/LoadingSkeleton';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 
 interface BrainLog {
@@ -99,31 +100,33 @@ export default function Dashboard() {
             Your numbers at a glance
           </h2>
           <div className="grid gap-4 sm:grid-cols-3">
+            {isLoadingMetrics ? (
+              <CardGridSkeleton count={3} cols={3} />
+            ) : (
+              <>
             <article className="p-5 sm:p-6 rounded-xl border border-slate-800 bg-slate-900/50">
               <p className="text-sm font-medium text-slate-400 mb-1">People who visited</p>
               <p className="text-3xl sm:text-4xl font-bold text-white tabular-nums">
-                {isLoadingMetrics ? '…' : metrics.pageViews}
+                {metrics.pageViews}
               </p>
             </article>
             <article className="p-5 sm:p-6 rounded-xl border border-slate-800 bg-slate-900/50">
               <p className="text-sm font-medium text-slate-400 mb-1">Clicked Get Started</p>
               <p className="text-3xl sm:text-4xl font-bold text-white tabular-nums">
-                {isLoadingMetrics ? '…' : metrics.ctaClicks}
+                {metrics.ctaClicks}
               </p>
             </article>
             <article className="p-5 sm:p-6 rounded-xl border border-slate-800 bg-slate-900/50">
               <p className="text-sm font-medium text-slate-400 mb-1">Conversion rate</p>
               <p className="text-3xl sm:text-4xl font-bold text-white tabular-nums">
-                {isLoadingMetrics
-                  ? '…'
-                  : metrics.conversionRate === null
-                    ? '—'
-                    : `${metrics.conversionRate}%`}
+                {metrics.conversionRate === null ? '—' : `${metrics.conversionRate}%`}
               </p>
-              {!isLoadingMetrics && metrics.conversionRate !== null && (
+              {metrics.conversionRate !== null && (
                 <p className="text-xs text-slate-500 mt-2">Clicks divided by visits</p>
               )}
             </article>
+              </>
+            )}
           </div>
 
           {!isLoadingMetrics && !hasActivity && (

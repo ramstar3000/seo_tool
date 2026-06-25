@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { apiError, apiNotConfigured } from '@/lib/api/errors';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 export async function GET(request: NextRequest) {
   const supabase = getSupabaseAdmin();
   if (!supabase) {
-    return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 });
+    return apiNotConfigured('Supabase');
   }
 
   const { searchParams } = request.nextUrl;
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await query;
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return apiError(error.message, 500, 'DB_ERROR');
   }
 
   const rows = data ?? [];

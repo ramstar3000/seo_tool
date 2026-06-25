@@ -1,6 +1,9 @@
 import { generateText } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { runResearchAgent } from '@/lib/research/agent';
+import { convertAuditRequestToLead } from '@/lib/leads/convert-from-audit';
+import { inferKeywordFromWebsite } from '@/lib/leads/infer-keyword';
+import { notifySlack } from '@/lib/notifications/slack';
 import {
   createPendingAudit,
   markAuditFailed,
@@ -12,10 +15,6 @@ import {
   VISITOR_AUDIT_SYSTEM_PROMPT,
 } from '@/lib/prompts/visitor-audit';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
-
-function deriveKeyword(businessName: string): string {
-  return `${businessName} near me`.slice(0, 200);
-}
 
 async function buildVisitorReportSummary(params: {
   businessName: string;
@@ -62,26 +61,26 @@ export async function processAuditRequest(requestId: string): Promise<void> {
   await supabase.from('audit_requests').update({ status: 'processing' }).eq('id', requestId);
 
   const businessName =
-    (request.business_name as string | null) ??
+    (request.business_name as string | null)?.trim() ||
     (() => {
       try {
-        return new URL(request.website_url).hostname;
+        return new URL(request.website_url as string).hostname;
       } catch {
         return 'Your business';
       }
     })();
-  const keyword = deriveKeyword(businessName);
+  const keyword = inferKeywordFromWebsite(request.website_url as string, businessName);
   let pendingAuditId: string | undefined;
 
   try {
     pendingAuditId = await createPendingAudit(supabase, {
-      targetUrl: request.website_url,
+      targetUrl: request.website_url as string,
       keyword,
       businessName,
     });
 
     const result = await runResearchAgent({
-      targetUrl: request.website_url,
+      targetUrl: request.website_url as string,
       keyword,
       businessName,
     });
@@ -92,7 +91,7 @@ export async function processAuditRequest(requestId: string): Promise<void> {
 
     const reportSummary = await buildVisitorReportSummary({
       businessName,
-      websiteUrl: request.website_url,
+      websiteUrl: request.website_url as string,
       summary: result.audit.summary ?? '',
       recommendations: result.audit.recommendations ?? '',
       findings: result.findings.map((f) => ({
@@ -103,14 +102,34 @@ export async function processAuditRequest(requestId: string): Promise<void> {
       })),
     });
 
+    const conversion = await convertAuditRequestToLead(supabase, {
+      email: request.email as string,
+      websiteUrl: request.website_url as string,
+      businessName,
+      auditId,
+    });
+
     await supabase
       .from('audit_requests')
       .update({
         status: 'completed',
         site_audit_id: auditId,
+        lead_id: conversion?.leadId ?? null,
         report_summary: reportSummary,
       })
       .eq('id', requestId);
+
+    void notifySlack(
+      [
+        '✅ Visitor audit completed',
+        `Business: ${businessName}`,
+        `Website: ${request.website_url}`,
+        conversion ? `Lead: ${conversion.created ? 'created' : 'linked'} (${conversion.leadId})` : '',
+        `Report: /audit/${requestId}`,
+      ]
+        .filter(Boolean)
+        .join('\n')
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Audit failed';
 
@@ -123,6 +142,7 @@ export async function processAuditRequest(requestId: string): Promise<void> {
       .update({
         status: 'failed',
         report_summary: 'We could not complete your audit. Please try again later or contact support.',
+        error_message: message.slice(0, 500),
       })
       .eq('id', requestId);
   }

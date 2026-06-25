@@ -25,10 +25,11 @@ export interface RunLeadAuditParams {
 
 export async function runAndPersistLeadAudit(
   supabase: SupabaseClient,
-  params: RunLeadAuditParams
+  params: RunLeadAuditParams,
+  options?: { force?: boolean }
 ): Promise<string> {
   const existing = await findAuditByLeadId(supabase, params.leadId);
-  if (existing?.status === 'completed') {
+  if (!options?.force && existing?.status === 'completed') {
     return existing.id;
   }
 
@@ -169,6 +170,7 @@ export async function processVisitorAuditRequest(
         status: 'completed',
         site_audit_id: auditId,
         report_summary: reportSummary,
+        error_message: null,
       })
       .eq('id', requestId);
   } catch (error) {
@@ -182,6 +184,7 @@ export async function processVisitorAuditRequest(
       .from('audit_requests')
       .update({
         status: 'failed',
+        error_message: message,
         report_summary: `We couldn't complete your audit right now. Please try again later.`,
       })
       .eq('id', requestId);
@@ -199,6 +202,8 @@ export async function getVisitorAuditDetail(
   status: string;
   report_summary: string | null;
   site_audit_id: string | null;
+  lead_id?: string | null;
+  error_message?: string | null;
   created_at: string;
   findings?: Array<{ severity: string; title: string; description: string; category: string }>;
 } | null> {
@@ -218,6 +223,8 @@ export async function getVisitorAuditDetail(
     status: request.status as string,
     report_summary: (request.report_summary as string | null) ?? null,
     site_audit_id: (request.site_audit_id as string | null) ?? null,
+    lead_id: (request.lead_id as string | null) ?? null,
+    error_message: (request.error_message as string | null) ?? null,
     created_at: request.created_at as string,
   };
 
