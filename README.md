@@ -34,6 +34,8 @@ Supabase Realtime Engine
 
 Run [`supabase/schema.sql`](supabase/schema.sql) once in the Supabase SQL Editor. This creates all tables, RLS policies, indexes, and Realtime publications in one step.
 
+For a full reset, use [`supabase/reset-and-schema.sql`](supabase/reset-and-schema.sql).
+
 ### 2. Environment Variables
 
 Copy `.env.local.example` to `.env.local` and fill in your keys:
@@ -54,12 +56,12 @@ cp .env.local.example .env.local
 
 1. In the [Supabase dashboard](https://supabase.com/dashboard), open **Authentication → Providers** and enable **Email**.
 2. Under **Authentication → URL Configuration**, set **Site URL** to `http://localhost:3000` (or your production URL) and add `http://localhost:3000/auth/callback` to **Redirect URLs**.
-3. (Optional) Enable **GitHub** provider for “Continue with GitHub” on the login page.
+3. (Optional) Enable **GitHub** for “Continue with GitHub” — see [`docs/GITHUB_OAUTH_SETUP.md`](docs/GITHUB_OAUTH_SETUP.md).
 4. Sign up at `/signup`, then sign in at `/login`.
 
-**Protected routes** require login: `/settings/*`, `/research/*`, all `/api/repos/*`, POST `/api/research/analyze`, PATCH `/api/leads/[id]`, POST `/api/leads/discover`, and POST `/api/optimize` (unless called by Vercel cron or `Authorization: Bearer $CRON_SECRET`).
+**Protected routes** require login: `/settings/*`, `/research` (list), GET `/api/research`, GET `/api/leads/export`, all `/api/repos/*`, PATCH `/api/leads/[id]`, POST `/api/leads/discover`, POST `/api/research/analyze`, and POST `/api/optimize` (unless cron or `CRON_SECRET`).
 
-**Public demo routes** stay open: `/`, `/dashboard`, `/leads`, `/seo-guide`, GET `/api/leads`, GET `/api/research`.
+**Public routes:** `/`, `/dashboard`, `/leads`, `/audit/[id]`, POST `/api/analytics`, POST `/api/audit-request`, GET `/api/audit-request/[id]`, GET `/api/leads`, GET `/api/research/[id]` (when linked to a visitor audit request or authenticated).
 
 ### 4. Run Locally
 
@@ -68,7 +70,8 @@ npm install
 npm run dev
 ```
 
-- **Landing page:** [http://localhost:3000](http://localhost:3000) — click the CTA a few times to seed analytics
+- **Landing page:** [http://localhost:3000](http://localhost:3000) — request a free audit via the CTA modal
+- **Visitor audit:** `/audit/{requestId}` — public report for free audit requests
 - **Agent dashboard:** [http://localhost:3000/dashboard](http://localhost:3000/dashboard) — live brain log stream
 - **Manual optimize trigger:** `curl -X POST http://localhost:3000/api/optimize`
 
@@ -82,26 +85,38 @@ Link the repository to Vercel and add the same environment variables. A cron job
 
 ```
 app/
-├── page.tsx              # Public living landing page (realtime copy)
-├── dashboard/page.tsx    # Showroom analytical dashboard
-└── api/optimize/route.ts # Edge CRO agent (LLM evaluation loop)
-supabase/schema.sql       # Database schema + RLS + Realtime
-vercel.json               # 15-minute autonomous cron
+├── page.tsx                  # Public landing page + free audit modal
+├── audit/[id]/page.tsx       # Visitor-facing audit report
+├── dashboard/page.tsx        # Showroom analytical dashboard
+└── api/
+    ├── analytics/route.ts    # Rate-limited analytics writes
+    ├── audit-request/        # Free visitor audit flow
+    └── optimize/route.ts     # Edge CRO agent (LLM evaluation loop)
+lib/
+├── rate-limit.ts             # In-memory sliding-window rate limiter
+└── prompts/visitor-audit.ts  # Editable visitor report prompt
+docs/GITHUB_OAUTH_SETUP.md    # GitHub OAuth setup guide
+supabase/schema.sql           # Database schema + RLS + Realtime
+vercel.json                   # 15-minute autonomous cron
 ```
 
 ---
 
 ## 🧪 Verification Sequence
 
-1. Run `npm run dev` and open the home page — confirm a `page_view` row appears in `analytics_events`.
-2. Click the CTA several times — confirm `cta_click` rows accumulate.
-3. Trigger the agent: `curl -X POST http://localhost:3000/api/optimize`
-4. Watch the landing page copy update live (no refresh needed) and new logs appear on `/dashboard`.
+1. Run `npm run dev` and open the home page — confirm a `page_view` row appears in `analytics_events` (via `/api/analytics`).
+2. Submit the free audit modal — confirm an `audit_requests` row and visit `/audit/{id}`.
+3. Sign in and run lead discovery — confirm auto-research queues up to 5 audits per run.
+4. Trigger the agent: `curl -X POST http://localhost:3000/api/optimize`
+5. Watch the landing page copy update live (no refresh needed) and new logs appear on `/dashboard`.
 
 ---
 
 ## ⚠️ Security Notes
 
-- Row Level Security policies restrict anon users to read copy/logs and insert analytics events only.
-- Sensitive mutations (research analyze, repo linking, PR creation, lead updates) require Supabase Auth at the middleware and API layer.
+- Analytics writes go through `POST /api/analytics` (service role); anon direct inserts are disabled.
+- Free audit requests are rate-limited (5/hour per IP); analytics at 30/min per IP.
+- In-memory rate limits are per server instance — see `lib/rate-limit.ts` for production caveats.
+- Sensitive mutations require Supabase Auth at the middleware and API layer.
+- Linked repositories are scoped per user (`user_id` on `linked_repositories`).
 - Never commit `.env.local` or expose `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, or `ANTHROPIC_API_KEY`.

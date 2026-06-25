@@ -1,6 +1,9 @@
 -- Reset public app schema (SynapseCRO). Drops tables in reverse dependency order.
 -- WARNING: Destroys all data in these tables.
 
+-- Visitor free audits (references site_audits)
+drop table if exists public.audit_requests cascade;
+
 -- Children of linked_repositories / site_audits
 drop table if exists public.repo_change_runs cascade;
 

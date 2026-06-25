@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/auth/require-user';
 import { getSocialSummaryByLeadId } from '@/lib/research/persist';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
@@ -8,6 +9,11 @@ export async function GET(
   _request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireUser();
+  if ('error' in auth) {
+    return auth.error;
+  }
+
   const supabase = getSupabaseAdmin();
   if (!supabase) {
     return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 });

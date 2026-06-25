@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from('linked_repositories')
     .select('*')
+    .eq('user_id', auth.user.id)
     .order('created_at', { ascending: false });
 
   if (leadId) {

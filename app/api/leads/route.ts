@@ -36,5 +36,30 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ leads: data ?? [] });
+  const rows = data ?? [];
+  const auditIds = rows
+    .map((row) => row.last_audit_id as string | null)
+    .filter((id): id is string => Boolean(id));
+
+  let auditStatusById = new Map<string, string>();
+
+  if (auditIds.length > 0) {
+    const { data: audits } = await supabase
+      .from('site_audits')
+      .select('id, status')
+      .in('id', auditIds);
+
+    auditStatusById = new Map(
+      (audits ?? []).map((a) => [a.id as string, a.status as string])
+    );
+  }
+
+  const leads = rows.map((row) => ({
+    ...row,
+    audit_status: row.last_audit_id
+      ? (auditStatusById.get(row.last_audit_id as string) ?? null)
+      : null,
+  }));
+
+  return NextResponse.json({ leads });
 }

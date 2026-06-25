@@ -16,9 +16,15 @@ function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState<'password' | 'magic'>('password');
-  const [message, setMessage] = useState<string | null>(
-    callbackError ? 'Sign-in link expired or invalid. Please try again.' : null
-  );
+  const [message, setMessage] = useState<string | null>(() => {
+    if (callbackError === 'auth_callback_failed') {
+      return 'Sign-in failed. If you used GitHub, confirm OAuth is enabled in Supabase and the callback URL is registered. See docs/GITHUB_OAUTH_SETUP.md.';
+    }
+    if (callbackError) {
+      return 'Sign-in link expired or invalid. Please try again.';
+    }
+    return null;
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!supabase) {
@@ -80,7 +86,11 @@ function LoginForm() {
     });
 
     if (error) {
-      setMessage(error.message);
+      setMessage(
+        error.message.includes('OAuth')
+          ? `${error.message} — check GitHub OAuth setup in Supabase (see docs/GITHUB_OAUTH_SETUP.md).`
+          : error.message
+      );
       setIsSubmitting(false);
     }
   }

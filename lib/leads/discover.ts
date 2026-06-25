@@ -66,25 +66,31 @@ function discoverFromFallback(): LeadInsert[] {
 async function upsertLeads(
   supabase: SupabaseClient,
   leads: LeadInsert[]
-): Promise<number> {
+): Promise<{ inserted: number; insertedLeadIds: string[] }> {
   let inserted = 0;
+  const insertedLeadIds: string[] = [];
 
   for (const lead of leads) {
-    const { error } = await supabase.from('leads').insert({
-      ...lead,
-      updated_at: new Date().toISOString(),
-    });
+    const { data, error } = await supabase
+      .from('leads')
+      .insert({
+        ...lead,
+        updated_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single();
 
-    if (!error) {
+    if (!error && data) {
       inserted += 1;
+      insertedLeadIds.push(data.id as string);
       continue;
     }
 
     // Unique violation — lead already exists (handles concurrent discovery runs)
-    if (error.code === '23505') continue;
+    if (error?.code === '23505') continue;
   }
 
-  return inserted;
+  return { inserted, insertedLeadIds };
 }
 
 export async function discoverLondonLeads(
@@ -110,9 +116,12 @@ export async function discoverLondonLeads(
   }
 
   let inserted = 0;
+  let insertedLeadIds: string[] = [];
 
   if (supabase) {
-    inserted = await upsertLeads(supabase, leads);
+    const upsertResult = await upsertLeads(supabase, leads);
+    inserted = upsertResult.inserted;
+    insertedLeadIds = upsertResult.insertedLeadIds;
 
     await supabase.from('lead_discovery_runs').insert({
       keywords_searched: keywordsSearched,
@@ -121,7 +130,7 @@ export async function discoverLondonLeads(
     });
   }
 
-  return { leads, keywordsSearched, source, inserted };
+  return { leads, keywordsSearched, source, inserted, insertedLeadIds };
 }
 
 export { LONDON_KEYWORDS };

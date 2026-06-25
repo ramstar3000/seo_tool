@@ -1,9 +1,8 @@
--- Full reset for Supabase SQL Editor: drop all app tables, then recreate from schema.
--- Paste this entire file into: Dashboard → SQL → New query → Run
--- WARNING: Destroys all data in public app tables.
-
 -- Reset public app schema (SynapseCRO). Drops tables in reverse dependency order.
 -- WARNING: Destroys all data in these tables.
+
+-- Visitor free audits (references site_audits)
+drop table if exists public.audit_requests cascade;
 
 -- Children of linked_repositories / site_audits
 drop table if exists public.repo_change_runs cascade;
@@ -108,6 +107,9 @@ create table public.site_audits (
   completed_at timestamptz
 );
 
+alter table public.leads
+  add column last_audit_id uuid references public.site_audits(id) on delete set null;
+
 create table public.audit_competitors (
   id uuid primary key default gen_random_uuid(),
   audit_id uuid not null references public.site_audits(id) on delete cascade,
@@ -185,6 +187,22 @@ create table public.repo_change_runs (
   created_at timestamptz default now()
 );
 
+-- 7. Visitor free audit requests
+create table public.audit_requests (
+  id uuid primary key default gen_random_uuid(),
+  email text not null,
+  website_url text not null,
+  business_name text,
+  status text default 'pending' check (status in ('pending', 'processing', 'completed', 'failed')),
+  site_audit_id uuid references public.site_audits(id) on delete set null,
+  report_summary text,
+  created_at timestamptz default now()
+);
+
+create index audit_requests_created_at_idx on public.audit_requests (created_at desc);
+create index audit_requests_site_audit_id_idx on public.audit_requests (site_audit_id);
+
+create index leads_last_audit_id_idx on public.leads (last_audit_id);
 create index linked_repositories_lead_id_idx on public.linked_repositories (lead_id);
 create index linked_repositories_audit_id_idx on public.linked_repositories (audit_id);
 create index linked_repositories_user_id_idx on public.linked_repositories (user_id);
@@ -204,16 +222,14 @@ alter table public.audit_findings enable row level security;
 alter table public.audit_social_profiles enable row level security;
 alter table public.linked_repositories enable row level security;
 alter table public.repo_change_runs enable row level security;
+alter table public.audit_requests enable row level security;
 
 create policy "Public read site_copy"
   on public.site_copy for select
   to anon, authenticated
   using (true);
 
-create policy "Public insert analytics_events"
-  on public.analytics_events for insert
-  to anon, authenticated
-  with check (true);
+-- Analytics writes go through POST /api/analytics (service role) only.
 
 create policy "Public read analytics_events"
   on public.analytics_events for select
@@ -260,15 +276,42 @@ create policy "Public read audit_social_profiles"
   to anon, authenticated
   using (true);
 
-create policy "Public read linked_repositories"
+create policy "User read linked_repositories"
   on public.linked_repositories for select
-  to anon, authenticated
-  using (true);
+  to authenticated
+  using (auth.uid() = user_id or user_id is null);
 
-create policy "Public read repo_change_runs"
+create policy "User insert linked_repositories"
+  on public.linked_repositories for insert
+  to authenticated
+  with check (auth.uid() = user_id);
+
+create policy "User update linked_repositories"
+  on public.linked_repositories for update
+  to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "User delete linked_repositories"
+  on public.linked_repositories for delete
+  to authenticated
+  using (auth.uid() = user_id);
+
+create policy "User read repo_change_runs"
   on public.repo_change_runs for select
+  to authenticated
+  using (
+    exists (
+      select 1 from public.linked_repositories lr
+      where lr.id = repository_id
+      and (lr.user_id = auth.uid() or lr.user_id is null)
+    )
+  );
+
+create policy "Anon insert audit_requests"
+  on public.audit_requests for insert
   to anon, authenticated
-  using (true);
+  with check (email is not null and length(trim(email)) > 0);
 
 -- Supabase Realtime
 alter publication supabase_realtime add table public.site_copy;

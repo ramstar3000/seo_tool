@@ -21,3 +21,7 @@ export {
   GITHUB_CHANGES_SYSTEM_PROMPT,
   buildGitHubChangesUserPrompt,
 } from '@/lib/prompts/github-changes';
+export {
+  VISITOR_AUDIT_SYSTEM_PROMPT,
+  buildVisitorAuditUserPrompt,
+} from '@/lib/prompts/visitor-audit';

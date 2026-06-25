@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { canAccessAudit } from '@/lib/auth/audit-access';
 import { getAuditById } from '@/lib/research/persist';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
@@ -14,6 +16,20 @@ export async function GET(
   }
 
   const { id } = await context.params;
+
+  const sessionClient = await createServerSupabaseClient();
+  let user = null;
+  if (sessionClient) {
+    const {
+      data: { user: sessionUser },
+    } = await sessionClient.auth.getUser();
+    user = sessionUser;
+  }
+
+  const allowed = await canAccessAudit(supabase, id, user);
+  if (!allowed) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   try {
     const audit = await getAuditById(supabase, id);

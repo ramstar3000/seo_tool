@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 
-type CtaState = 'idle' | 'submitting' | 'success';
+type CtaState = 'idle' | 'modal' | 'submitting' | 'success';
 
 const DEFAULT_COPY = {
   hero_title: 'Get more customers from your website',
@@ -17,10 +17,27 @@ function hasSupabaseConfig(): boolean {
   return createBrowserSupabaseClient() !== null;
 }
 
+async function trackAnalytics(eventType: 'page_view' | 'cta_click'): Promise<void> {
+  try {
+    await fetch('/api/analytics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_type: eventType }),
+    });
+  } catch {
+    // Non-blocking analytics
+  }
+}
+
 export default function Home() {
   const [copy, setCopy] = useState<Record<string, string>>({});
   const [isLoadingCopy, setIsLoadingCopy] = useState(hasSupabaseConfig);
   const [ctaState, setCtaState] = useState<CtaState>('idle');
+  const [email, setEmail] = useState('');
+  const [websiteUrl, setWebsiteUrl] = useState('');
+  const [businessName, setBusinessName] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
+  const [auditRequestId, setAuditRequestId] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createBrowserSupabaseClient();
@@ -40,7 +57,7 @@ export default function Home() {
         setIsLoadingCopy(false);
       });
 
-    supabase.from('analytics_events').insert({ event_type: 'page_view' }).then();
+    void trackAnalytics('page_view');
 
     const channel = supabase
       .channel('live_copy')
@@ -59,18 +76,41 @@ export default function Home() {
     };
   }, []);
 
-  const handleCTAClick = async () => {
+  const handleCTAClick = () => {
     if (ctaState !== 'idle') return;
+    setFormError(null);
+    setCtaState('modal');
+    void trackAnalytics('cta_click');
+  };
 
+  const handleAuditSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setFormError(null);
     setCtaState('submitting');
-    const supabase = createBrowserSupabaseClient();
-    if (!supabase) {
-      setCtaState('idle');
-      return;
-    }
 
-    await supabase.from('analytics_events').insert({ event_type: 'cta_click' });
-    setCtaState('success');
+    try {
+      const response = await fetch('/api/audit-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          websiteUrl: websiteUrl.trim(),
+          businessName: businessName.trim() || undefined,
+        }),
+      });
+
+      const body = (await response.json()) as { id?: string; error?: string };
+
+      if (!response.ok || !body.id) {
+        throw new Error(body.error ?? 'Failed to submit audit request');
+      }
+
+      setAuditRequestId(body.id);
+      setCtaState('success');
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Failed to submit audit request');
+      setCtaState('modal');
+    }
   };
 
   const heroTitle = copy.hero_title || DEFAULT_COPY.hero_title;
@@ -80,6 +120,86 @@ export default function Home() {
 
   return (
     <main className="flex-1 bg-slate-950 text-white">
+      {(ctaState === 'modal' || ctaState === 'submitting') && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-slate-950/80 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="audit-modal-title"
+        >
+          <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-xl space-y-5">
+            <header className="space-y-1">
+              <h2 id="audit-modal-title" className="text-xl font-bold text-white">
+                Get your free audit
+              </h2>
+              <p className="text-sm text-slate-400">
+                Enter your details and we&apos;ll analyze your site automatically.
+              </p>
+            </header>
+
+            <form onSubmit={(e) => void handleAuditSubmit(e)} className="space-y-4">
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-slate-300">Email</span>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full min-h-11 rounded-lg border border-slate-700 bg-slate-950 px-3 text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:outline-none"
+                  placeholder="you@yourbusiness.com"
+                />
+              </label>
+
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-slate-300">Website URL</span>
+                <input
+                  type="url"
+                  required
+                  value={websiteUrl}
+                  onChange={(e) => setWebsiteUrl(e.target.value)}
+                  className="w-full min-h-11 rounded-lg border border-slate-700 bg-slate-950 px-3 text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:outline-none"
+                  placeholder="https://yourbusiness.com"
+                />
+              </label>
+
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium text-slate-300">Business name (optional)</span>
+                <input
+                  type="text"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  className="w-full min-h-11 rounded-lg border border-slate-700 bg-slate-950 px-3 text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:outline-none"
+                  placeholder="Your Business Ltd"
+                />
+              </label>
+
+              {formError && (
+                <p className="text-sm text-red-300 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+                  {formError}
+                </p>
+              )}
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setCtaState('idle')}
+                  className="flex-1 min-h-11 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={ctaState === 'submitting'}
+                  className="flex-1 min-h-11 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white font-medium transition-colors"
+                >
+                  {ctaState === 'submitting' ? 'Starting audit…' : 'Start free audit'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Hero — value proposition above the fold */}
       <section className="px-4 sm:px-6 py-16 sm:py-24 text-center">
         <div className="max-w-2xl mx-auto space-y-6 sm:space-y-8">
@@ -102,7 +222,7 @@ export default function Home() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 pt-2">
-            {ctaState === 'success' ? (
+            {ctaState === 'success' && auditRequestId ? (
               <div
                 className="inline-flex flex-col items-center gap-2 px-6 py-4 rounded-xl bg-emerald-500/15 border border-emerald-500/30"
                 role="status"
@@ -119,14 +239,17 @@ export default function Home() {
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
-                  Request received — thank you!
+                  Your audit is running!
                 </span>
-                <p className="text-sm text-slate-400">
-                  Check the{' '}
-                  <Link href="/dashboard" className="text-emerald-400 underline underline-offset-2 hover:text-emerald-300">
-                    activity dashboard
-                  </Link>{' '}
-                  to see your click recorded.
+                <p className="text-sm text-slate-400 max-w-sm">
+                  We&apos;ll email you at <span className="text-slate-300">{email}</span> when it&apos;s ready.
+                  View progress at{' '}
+                  <Link
+                    href={`/audit/${auditRequestId}`}
+                    className="text-emerald-400 underline underline-offset-2 hover:text-emerald-300"
+                  >
+                    /audit/{auditRequestId.slice(0, 8)}…
+                  </Link>
                 </p>
               </div>
             ) : (
@@ -137,7 +260,7 @@ export default function Home() {
                   disabled={ctaState === 'submitting' || showLoadingHero}
                   className="min-h-12 px-8 py-3 bg-white text-slate-950 font-semibold rounded-xl transition-all hover:bg-slate-100 active:scale-[0.98] shadow-lg disabled:opacity-60 disabled:cursor-not-allowed text-base sm:text-lg"
                 >
-                  {ctaState === 'submitting' ? 'Sending your request…' : ctaText}
+                  {ctaText}
                 </button>
                 <Link
                   href="/dashboard"
@@ -207,8 +330,8 @@ export default function Home() {
               { step: '1', title: 'Visitors land on your page', detail: 'We count each visit automatically.' },
               {
                 step: '2',
-                title: 'They click your main button',
-                detail: 'When someone requests an audit, we record that too.',
+                title: 'They request a free audit',
+                detail: 'Enter email and website — we run a real SEO/CRO analysis.',
               },
               {
                 step: '3',

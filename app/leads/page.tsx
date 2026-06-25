@@ -16,6 +16,36 @@ interface AnalyzeState {
   [leadId: string]: 'loading' | 'done' | 'error';
 }
 
+function AuditStatusBadge({ status, auditId }: { status: string; auditId?: string | null }) {
+  const styles =
+    status === 'completed'
+      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+      : status === 'running' || status === 'pending'
+        ? 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+        : status === 'failed'
+          ? 'bg-red-500/15 text-red-300 border-red-500/30'
+          : 'bg-violet-500/15 text-violet-300 border-violet-500/30';
+
+  const label = status === 'completed' ? 'Audited' : `Audit: ${status}`;
+
+  if (auditId && status === 'completed') {
+    return (
+      <Link
+        href={`/research/${auditId}`}
+        className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border hover:opacity-90 ${styles}`}
+      >
+        {label}
+      </Link>
+    );
+  }
+
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${styles}`}>
+      {label}
+    </span>
+  );
+}
+
 function RankBadge({ rank }: { rank: 3 | 4 }) {
   const styles =
     rank === 3
@@ -74,7 +104,19 @@ export default function LeadsPage() {
     void (async () => {
       try {
         const data = await requestLeads(rankFilter, categoryFilter);
-        if (!cancelled) setLeads(data);
+        if (!cancelled) {
+          setLeads(data);
+          const audits: LeadAuditMap = {};
+          for (const lead of data) {
+            if (lead.last_audit_id) {
+              audits[lead.id] = {
+                auditId: lead.last_audit_id,
+                status: lead.audit_status ?? 'completed',
+              };
+            }
+          }
+          setLeadAudits(audits);
+        }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Failed to load leads');
@@ -331,7 +373,15 @@ export default function LeadsPage() {
                       <Fragment key={lead.id}>
                         <tr className="border-b border-slate-800/80 hover:bg-slate-900/30">
                           <td className="px-4 py-3">
-                            <div className="font-medium text-white">{lead.business_name}</div>
+                            <div className="font-medium text-white flex flex-wrap items-center gap-2">
+                              {lead.business_name}
+                              {(lead.audit_status || lead.last_audit_id) && (
+                                <AuditStatusBadge
+                                  status={lead.audit_status ?? 'completed'}
+                                  auditId={lead.last_audit_id}
+                                />
+                              )}
+                            </div>
                             {lead.website_url ? (
                               <a
                                 href={lead.website_url}
@@ -388,9 +438,9 @@ export default function LeadsPage() {
                             )}
                             {lead.website_url && (
                               <div className="flex flex-col gap-1">
-                                {leadAudits[lead.id] ? (
+                                {lead.last_audit_id || leadAudits[lead.id] ? (
                                   <Link
-                                    href={`/research/${leadAudits[lead.id].auditId}`}
+                                    href={`/research/${lead.last_audit_id ?? leadAudits[lead.id].auditId}`}
                                     className="text-xs font-medium text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
                                   >
                                     View audit

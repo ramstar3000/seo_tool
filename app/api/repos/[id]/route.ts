@@ -20,6 +20,20 @@ export async function DELETE(
 
   const { id } = await context.params;
 
+  const { data: repo, error: fetchError } = await supabase
+    .from('linked_repositories')
+    .select('user_id')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (fetchError || !repo) {
+    return NextResponse.json({ error: 'Linked repository not found' }, { status: 404 });
+  }
+
+  if (repo.user_id !== auth.user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   const { error } = await supabase.from('linked_repositories').delete().eq('id', id);
 
   if (error) {

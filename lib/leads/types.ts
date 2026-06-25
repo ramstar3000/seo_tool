@@ -15,6 +15,8 @@ export interface Lead {
   status: LeadStatus;
   notes: string | null;
   recommendation: string | null;
+  last_audit_id: string | null;
+  audit_status?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -49,4 +51,5 @@ export interface DiscoverResult {
   keywordsSearched: string[];
   source: 'serpapi' | 'fallback';
   inserted: number;
+  insertedLeadIds: string[];
 }

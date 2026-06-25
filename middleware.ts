@@ -3,7 +3,11 @@ import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { updateSession } from '@/lib/supabase/middleware';
 
 function isProtectedPage(pathname: string): boolean {
-  return pathname.startsWith('/settings') || pathname.startsWith('/research');
+  if (pathname.startsWith('/settings')) return true;
+  if (pathname === '/research') return true;
+  if (/^\/research\/[^/]+$/.test(pathname)) return false;
+  if (pathname.startsWith('/research')) return true;
+  return false;
 }
 
 function isAuthPage(pathname: string): boolean {
@@ -16,6 +20,22 @@ function isProtectedApiRoute(pathname: string, method: string, request: NextRequ
   }
 
   if (pathname === '/api/research/analyze' && method === 'POST') {
+    return true;
+  }
+
+  if (pathname === '/api/research' && method === 'GET') {
+    return true;
+  }
+
+  if (/^\/api\/research\/[^/]+$/.test(pathname) && method === 'GET') {
+    return false;
+  }
+
+  if (pathname === '/api/leads/export' && method === 'GET') {
+    return true;
+  }
+
+  if (/^\/api\/leads\/[^/]+\/social-summary$/.test(pathname) && method === 'GET') {
     return true;
   }
 

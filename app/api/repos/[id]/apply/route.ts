@@ -53,6 +53,10 @@ export async function POST(
     return NextResponse.json({ error: 'Linked repository not found' }, { status: 404 });
   }
 
+  if (repoRow.user_id !== auth.user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   const repo: LinkedRepository = {
     id: repoRow.id as string,
     lead_id: (repoRow.lead_id as string | null) ?? null,
