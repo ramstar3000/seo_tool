@@ -53,6 +53,11 @@ export const checkSocialPresenceInputSchema = z.object({
   websiteUrl: z.string().url().optional(),
 });
 
+export const checkPageSpeedInputSchema = z.object({
+  url: z.string().url(),
+  strategy: z.enum(['mobile', 'desktop']).optional(),
+});
+
 export const auditReportSchema = z.object({
   summary: z.string(),
   recommendations: z.string(),
@@ -77,4 +82,5 @@ export type DiscoverSiblingPagesInput = z.infer<typeof discoverSiblingPagesInput
 export type CompareMessagingInput = z.infer<typeof compareMessagingInputSchema>;
 export type CheckSerpAdsInput = z.infer<typeof checkSerpAdsInputSchema>;
 export type CheckSocialPresenceInput = z.infer<typeof checkSocialPresenceInputSchema>;
+export type CheckPageSpeedInput = z.infer<typeof checkPageSpeedInputSchema>;
 export type AuditReport = z.infer<typeof auditReportSchema>;

@@ -29,3 +29,33 @@ export function getFirecrawlApiKey(): string | undefined {
 export function getGitHubToken(): string | undefined {
   return process.env.GITHUB_TOKEN;
 }
+
+export function getGooglePageSpeedApiKey(): string | undefined {
+  return process.env.GOOGLE_PAGESPEED_API_KEY;
+}
+
+export function getSlackWebhookUrl(): string | undefined {
+  return process.env.SLACK_WEBHOOK_URL;
+}
+
+export function getResendApiKey(): string | undefined {
+  return process.env.RESEND_API_KEY;
+}
+
+export function getResendFromEmail(): string {
+  return process.env.RESEND_FROM_EMAIL ?? 'SynapseCRO <onboarding@resend.dev>';
+}
+
+export function getAppBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return 'http://localhost:3000';
+}
+
+export function hasSupabaseConfig(): boolean {
+  return Boolean(getSupabaseUrl() && getSupabaseServiceRoleKey());
+}
+
+export function hasAnthropicConfig(): boolean {
+  return Boolean(getAnthropicApiKey());
+}

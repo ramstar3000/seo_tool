@@ -51,10 +51,14 @@ function isProtectedApiRoute(pathname: string, method: string, request: NextRequ
     return !isCronAuthorized(request);
   }
 
+  if (pathname === '/api/cron/re-audit-leads' && (method === 'POST' || method === 'GET')) {
+    return !isCronAuthorized(request);
+  }
+
   return false;
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const method = request.method;
 

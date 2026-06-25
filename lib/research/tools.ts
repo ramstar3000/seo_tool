@@ -1,6 +1,7 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import { fetchPageContent } from '@/lib/research/fetch-page';
 import { comparePageMessaging } from '@/lib/research/messaging';
+import { fetchPageSpeedMetrics, formatPageSpeedMetrics } from '@/lib/research/pagespeed';
 import { extractSeoSignals } from '@/lib/research/seo-extract';
 import { discoverInternalPages } from '@/lib/research/sitemap';
 import { findCompetitors, getSerpAds, parseBusinessName } from '@/lib/research/serp';
@@ -9,6 +10,7 @@ import { SOCIAL_REFERENCE_PLATFORMS } from '@/lib/research/social-platforms';
 import {
   checkSerpAdsInputSchema,
   checkSocialPresenceInputSchema,
+  checkPageSpeedInputSchema,
   compareMessagingInputSchema,
   discoverSiblingPagesInputSchema,
   finalizeAuditInputSchema,
@@ -102,6 +104,23 @@ export const ANTHROPIC_TOOL_DEFINITIONS: Anthropic.Tool[] = [
         location: { type: 'string', description: 'Location for local profile search (defaults to London)' },
         websiteUrl: { type: 'string', description: 'Website URL to extract linked social profiles from' },
       },
+    },
+  },
+  {
+    name: 'check_page_speed',
+    description:
+      'Fetch Google PageSpeed Insights / Core Web Vitals for a URL (LCP, CLS, INP, performance score). Skips gracefully if API key is missing.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'Full URL to analyze' },
+        strategy: {
+          type: 'string',
+          enum: ['mobile', 'desktop'],
+          description: 'Device strategy (default: mobile)',
+        },
+      },
+      required: ['url'],
     },
   },
   {
@@ -285,6 +304,38 @@ export async function executeTool(
           ? undefined
           : 'SerpAPI key not configured — returning platform checklist with not_searched status',
         referencePlatforms: SOCIAL_REFERENCE_PLATFORM_SUMMARY,
+      };
+    }
+
+    case 'check_page_speed': {
+      const parsed = checkPageSpeedInputSchema.parse(input);
+      const metrics = await fetchPageSpeedMetrics(parsed.url, parsed.strategy ?? 'mobile');
+      ctx.pageSpeed = metrics;
+
+      if (!metrics.skipped && metrics.performanceScore != null && metrics.performanceScore < 50) {
+        ctx.findings.push({
+          severity: 'warning',
+          category: 'technical',
+          title: 'Poor Core Web Vitals performance score',
+          description: `${formatPageSpeedMetrics(metrics)}. Slow pages hurt SEO rankings and conversion rates.`,
+          evidence: { pageSpeed: metrics },
+        });
+      }
+
+      if (!metrics.skipped && metrics.lcpMs != null && metrics.lcpMs > 4000) {
+        ctx.findings.push({
+          severity: 'warning',
+          category: 'technical',
+          title: 'Largest Contentful Paint is slow',
+          description: `LCP is ${(metrics.lcpMs / 1000).toFixed(1)}s (target under 2.5s). Optimize hero images, fonts, and server response time.`,
+          evidence: { lcpMs: metrics.lcpMs },
+        });
+      }
+
+      return {
+        metrics,
+        summary: formatPageSpeedMetrics(metrics),
+        note: metrics.skipped ? metrics.reason : undefined,
       };
     }
 

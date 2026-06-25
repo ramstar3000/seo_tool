@@ -34,6 +34,12 @@ Optional — GitHub PR automation:
 Optional — cron / scheduled optimize:
   CRON_SECRET                    Bearer token for manual POST /api/optimize (Vercel cron uses x-vercel-cron)
 
+Optional — Core Web Vitals in research audits:
+  GOOGLE_PAGESPEED_API_KEY       Google PageSpeed Insights API key (skips gracefully if unset)
+
+Optional — Slack notifications:
+  SLACK_WEBHOOK_URL              Incoming webhook for audit-complete and PR-created alerts
+
 Optional — database reset script (scripts/reset-and-seed.sh):
   SUPABASE_DB_URL                Direct Postgres URI (or DATABASE_URL)
 

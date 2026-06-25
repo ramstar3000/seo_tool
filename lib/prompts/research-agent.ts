@@ -11,6 +11,7 @@ Guidelines:
 - After competitor analysis, call check_social_presence to discover profiles on LinkedIn, Instagram, Facebook, GBP, Yelp, and other reference platforms. Compare messaging (business name, tagline, phone, CTA) across the website and found profiles.
 - Use compare_messaging to detect H1/meta/CTA inconsistencies across scraped website pages.
 - Use check_serp_ads to spot ad copy vs on-site messaging gaps.
+- Call check_page_speed on the target URL to capture Core Web Vitals when available.
 - Save findings with save_finding as you discover issues (severity: critical, warning, or info).
 - Categories: seo, messaging, cro, technical, competitive, social.
 - For social/directory gaps or NAP/messaging mismatches, use category "social".
@@ -34,5 +35,5 @@ Location: ${location}
 Target URL: ${targetUrl}
 Primary keyword: ${keyword}
 
-Conduct a thorough SEO and CRO audit. Scrape the homepage and key internal pages, analyze competitors for "${keyword}", check social & directory presence (LinkedIn, Instagram, GBP, Yelp, etc.) and compare messaging across web + socials, check on-site messaging consistency, and save actionable findings. Finalize with a summary and recommendations.`;
+Conduct a thorough SEO and CRO audit. Scrape the homepage and key internal pages, analyze competitors for "${keyword}", check Core Web Vitals with check_page_speed, check social & directory presence (LinkedIn, Instagram, GBP, Yelp, etc.) and compare messaging across web + socials, check on-site messaging consistency, and save actionable findings. Finalize with a summary and recommendations.`;
 }

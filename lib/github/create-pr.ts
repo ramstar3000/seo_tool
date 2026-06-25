@@ -1,4 +1,5 @@
 import { githubFetch } from '@/lib/github/client';
+import { notifySlack } from '@/lib/notifications/slack';
 import type { FileChange } from '@/lib/github/types';
 
 interface RefResponse {
@@ -74,6 +75,15 @@ export async function createPullRequestFromChanges(params: {
       body: prBody,
     }),
   });
+
+  void notifySlack(
+    [
+      '🔀 SynapseCRO PR created',
+      prTitle,
+      pull.html_url,
+      `Repo: ${owner}/${repo}`,
+    ].join('\n')
+  );
 
   return {
     prUrl: pull.html_url,

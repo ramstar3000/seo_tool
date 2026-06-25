@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { extractPageSpeedFromTrace } from '@/lib/research/pagespeed';
 import type {
   AuditCompetitor,
   AuditFinding,
@@ -109,6 +110,7 @@ export interface AuditDetail extends SiteAudit {
   findings: Array<AuditFinding & { id: string }>;
   socialProfiles: Array<AuditSocialProfile & { id: string; platform_name?: string }>;
   socialPresence: SocialPresenceSnapshot | null;
+  pageSpeed: ReturnType<typeof extractPageSpeedFromTrace>;
 }
 
 export async function getAuditById(
@@ -169,6 +171,7 @@ export async function getAuditById(
     findings: (findingsRes.data ?? []) as Array<AuditFinding & { id: string }>,
     socialProfiles,
     socialPresence,
+    pageSpeed: extractPageSpeedFromTrace((audit.tool_trace as ToolTraceEntry[]) ?? []),
   };
 }
 

@@ -93,6 +93,7 @@ export async function runResearchAgent(params: RunResearchAgentParams): Promise<
     socialProfiles: [],
     socialInconsistencies: [],
     socialSearched: false,
+    pageSpeed: null,
     scrapeCount: 0,
     maxScrapes: MAX_PAGE_SCRAPES,
     finalized: false,

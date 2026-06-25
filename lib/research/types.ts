@@ -67,6 +67,17 @@ export interface SiteAudit {
   completed_at: string | null;
 }
 
+export interface PageSpeedSnapshot {
+  url: string;
+  strategy: 'mobile' | 'desktop';
+  performanceScore: number | null;
+  lcpMs: number | null;
+  cls: number | null;
+  inpMs: number | null;
+  skipped: boolean;
+  reason?: string;
+}
+
 export interface ToolContext {
   targetUrl: string;
   keyword: string;
@@ -78,6 +89,7 @@ export interface ToolContext {
   socialProfiles: AuditSocialProfile[];
   socialInconsistencies: SocialMessagingIssue[];
   socialSearched: boolean;
+  pageSpeed: PageSpeedSnapshot | null;
   scrapeCount: number;
   maxScrapes: number;
   finalized: boolean;
