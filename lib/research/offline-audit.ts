@@ -20,8 +20,45 @@ export interface RunResearchAgentParams {
   leadId?: string;
 }
 
+function isNoindex(seo: SeoSignals): boolean {
+  return Boolean(seo.robots?.toLowerCase().includes('noindex'));
+}
+
+function looksLikeAccessGate(seo: SeoSignals): boolean {
+  if (seo.wordCount > 80) return false;
+  const h1 = seo.h1.join(' ').toLowerCase();
+  const title = (seo.title ?? '').toLowerCase();
+  return (
+    h1.includes('quick step') ||
+    title.includes('continue to') ||
+    seo.ctas.some((cta) => /^continue$/i.test(cta.trim()))
+  );
+}
+
 function buildSeoFindings(seo: SeoSignals, keyword: string): AuditFinding[] {
   const findings: AuditFinding[] = [];
+
+  if (isNoindex(seo)) {
+    findings.push({
+      severity: 'critical',
+      category: 'seo',
+      title: 'Page blocked from search indexing',
+      description:
+        'A noindex robots meta tag prevents Google from indexing this page. Remove it on public marketing pages or audits will only see a gate/shell.',
+      evidence: { url: seo.url, robots: seo.robots },
+    });
+  }
+
+  if (looksLikeAccessGate(seo)) {
+    findings.push({
+      severity: 'warning',
+      category: 'cro',
+      title: 'Access gate instead of marketing homepage',
+      description:
+        'The public URL shows a short gate or login step rather than a full value proposition. Crawlers and visitors see minimal copy before authentication.',
+      evidence: { url: seo.url, h1: seo.h1, wordCount: seo.wordCount },
+    });
+  }
 
   if (!seo.title) {
     findings.push({
@@ -87,6 +124,27 @@ function buildSeoFindings(seo: SeoSignals, keyword: string): AuditFinding[] {
       category: 'technical',
       title: 'No JSON-LD structured data',
       description: 'Consider adding LocalBusiness or relevant schema markup for rich results.',
+      evidence: { url: seo.url },
+    });
+  }
+
+  if (!seo.canonical) {
+    findings.push({
+      severity: 'info',
+      category: 'seo',
+      title: 'No canonical URL',
+      description: 'Add a canonical link tag to consolidate duplicate URLs and clarify the preferred page for search engines.',
+      evidence: { url: seo.url },
+    });
+  }
+
+  if (!seo.ogTitle && !seo.ogDescription) {
+    findings.push({
+      severity: 'warning',
+      category: 'seo',
+      title: 'Missing Open Graph metadata',
+      description:
+        'No og:title or og:description tags found. Social shares will fall back to generic snippets and hurt click-through rates.',
       evidence: { url: seo.url },
     });
   }

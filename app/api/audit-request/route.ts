@@ -8,6 +8,7 @@ import {
   rateLimitResponse,
 } from '@/lib/rate-limit';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
+import { checkSupabaseSchema, schemaNotAppliedMessage } from '@/lib/supabase/schema-health';
 
 export const runtime = 'nodejs';
 
@@ -28,6 +29,11 @@ export async function POST(request: NextRequest) {
   const supabase = getSupabaseAdmin();
   if (!supabase) {
     return apiNotConfigured('Supabase');
+  }
+
+  const schema = await checkSupabaseSchema(supabase);
+  if (!schema.ok) {
+    return apiError(schemaNotAppliedMessage(schema.missingTables), 503, 'SCHEMA_NOT_APPLIED');
   }
 
   let body: z.infer<typeof auditRequestBodySchema>;
@@ -51,11 +57,7 @@ export async function POST(request: NextRequest) {
   if (error || !data) {
     console.error('[audit-request] insert failed:', error?.code, error?.message);
     if (error?.code === 'PGRST205') {
-      return apiError(
-        'Database schema not applied. Run supabase/schema.sql in your Supabase SQL editor.',
-        503,
-        'SCHEMA_NOT_READY'
-      );
+      return apiError(schemaNotAppliedMessage(['audit_requests']), 503, 'SCHEMA_NOT_APPLIED');
     }
     return apiError('Failed to create audit request', 500, 'DB_ERROR');
   }
