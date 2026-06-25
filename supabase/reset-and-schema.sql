@@ -1,0 +1,280 @@
+-- Full reset for Supabase SQL Editor: drop all app tables, then recreate from schema.
+-- Paste this entire file into: Dashboard → SQL → New query → Run
+-- WARNING: Destroys all data in public app tables.
+
+-- Reset public app schema (SynapseCRO). Drops tables in reverse dependency order.
+-- WARNING: Destroys all data in these tables.
+
+-- Children of linked_repositories / site_audits
+drop table if exists public.repo_change_runs cascade;
+
+-- References leads, site_audits, auth.users
+drop table if exists public.linked_repositories cascade;
+
+-- Children of site_audits
+drop table if exists public.audit_social_profiles cascade;
+drop table if exists public.audit_findings cascade;
+drop table if exists public.audit_pages cascade;
+drop table if exists public.audit_competitors cascade;
+
+-- References leads
+drop table if exists public.site_audits cascade;
+
+-- Independent / parent tables
+drop table if exists public.leads cascade;
+drop table if exists public.lead_discovery_runs cascade;
+drop table if exists public.agent_brain_logs cascade;
+drop table if exists public.analytics_events cascade;
+drop table if exists public.site_copy cascade;
+
+-- After running this, run schema.sql
+
+-- ========== schema.sql ==========
+
+-- Run this entire file on a fresh Supabase project. No migrations needed.
+-- SynapseCRO Database Schema
+
+-- 1. Dynamic Website Content
+create table public.site_copy (
+  id text primary key,
+  text_content text not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+insert into public.site_copy (id, text_content) values
+  ('hero_title', 'Autonomous Agent Systems For Local Business'),
+  ('hero_subtitle', 'We help local brands gain discovery through tailored optimization packages.'),
+  ('cta_text', 'Secure Free Audit');
+
+-- 2. User Activity Log (Sensory Input)
+create table public.analytics_events (
+  id uuid default gen_random_uuid() primary key,
+  event_type text not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 3. Agent Cognitive Log (Dashboard Stream)
+create table public.agent_brain_logs (
+  id uuid default gen_random_uuid() primary key,
+  thought_process text not null,
+  action_taken text not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 4. London Lead Pipeline
+create table public.leads (
+  id uuid primary key default gen_random_uuid(),
+  business_name text not null,
+  category text,
+  location text default 'London',
+  keyword text not null,
+  rank_position int not null check (rank_position in (3, 4)),
+  website_url text,
+  google_maps_url text,
+  phone text,
+  address text,
+  lead_score int default 70,
+  status text default 'new' check (status in ('new', 'contacted', 'qualified', 'converted', 'dismissed')),
+  notes text,
+  recommendation text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create unique index leads_business_keyword_unique
+  on public.leads (business_name, keyword);
+
+create table public.lead_discovery_runs (
+  id uuid primary key default gen_random_uuid(),
+  keywords_searched text[] not null,
+  leads_found int default 0,
+  status text default 'completed',
+  error_message text,
+  created_at timestamptz default now()
+);
+
+-- 5. Research Agent Audits
+create table public.site_audits (
+  id uuid primary key default gen_random_uuid(),
+  lead_id uuid references public.leads(id) on delete set null,
+  target_url text not null,
+  keyword text not null,
+  business_name text not null,
+  status text not null default 'pending' check (status in ('pending', 'running', 'completed', 'failed')),
+  summary text,
+  recommendations text,
+  tool_trace jsonb default '[]'::jsonb,
+  created_at timestamptz default now(),
+  completed_at timestamptz
+);
+
+create table public.audit_competitors (
+  id uuid primary key default gen_random_uuid(),
+  audit_id uuid not null references public.site_audits(id) on delete cascade,
+  rank_position int not null,
+  business_name text not null,
+  url text not null,
+  title text not null,
+  snippet text
+);
+
+create table public.audit_pages (
+  id uuid primary key default gen_random_uuid(),
+  audit_id uuid not null references public.site_audits(id) on delete cascade,
+  url text not null,
+  is_target boolean default false,
+  page_type text default 'unknown',
+  seo_json jsonb not null,
+  scraped_at timestamptz default now()
+);
+
+create table public.audit_findings (
+  id uuid primary key default gen_random_uuid(),
+  audit_id uuid not null references public.site_audits(id) on delete cascade,
+  severity text not null check (severity in ('critical', 'warning', 'info')),
+  category text not null check (category in ('seo', 'messaging', 'cro', 'technical', 'competitive', 'social')),
+  title text not null,
+  description text not null,
+  evidence jsonb
+);
+
+create table public.audit_social_profiles (
+  id uuid primary key default gen_random_uuid(),
+  audit_id uuid not null references public.site_audits(id) on delete cascade,
+  platform_id text not null,
+  profile_url text,
+  bio_text text,
+  seo_json jsonb,
+  found_via text check (found_via in ('serp', 'website_link')),
+  status text not null default 'not_searched' check (status in ('found', 'missing', 'not_searched', 'error'))
+);
+
+create index site_audits_lead_id_idx on public.site_audits (lead_id);
+create index site_audits_created_at_idx on public.site_audits (created_at desc);
+create index audit_competitors_audit_id_idx on public.audit_competitors (audit_id);
+create index audit_pages_audit_id_idx on public.audit_pages (audit_id);
+create index audit_findings_audit_id_idx on public.audit_findings (audit_id);
+create index audit_social_profiles_audit_id_idx on public.audit_social_profiles (audit_id);
+
+-- 6. Linked GitHub Repositories & PR Change Runs
+create table public.linked_repositories (
+  id uuid primary key default gen_random_uuid(),
+  lead_id uuid references public.leads(id) on delete cascade,
+  audit_id uuid references public.site_audits(id) on delete set null,
+  user_id uuid references auth.users(id) on delete set null,
+  label text,
+  github_owner text not null,
+  github_repo text not null,
+  default_branch text default 'main',
+  repo_url text not null,
+  content_paths jsonb default '[]'::jsonb,
+  created_at timestamptz default now()
+);
+
+create table public.repo_change_runs (
+  id uuid primary key default gen_random_uuid(),
+  repository_id uuid not null references public.linked_repositories(id) on delete cascade,
+  audit_id uuid references public.site_audits(id),
+  status text default 'pending' check (status in ('pending', 'completed', 'failed')),
+  pr_url text,
+  pr_number int,
+  branch_name text,
+  change_summary text,
+  files_changed jsonb,
+  error_message text,
+  created_at timestamptz default now()
+);
+
+create index linked_repositories_lead_id_idx on public.linked_repositories (lead_id);
+create index linked_repositories_audit_id_idx on public.linked_repositories (audit_id);
+create index linked_repositories_user_id_idx on public.linked_repositories (user_id);
+create index repo_change_runs_repository_id_idx on public.repo_change_runs (repository_id);
+create index repo_change_runs_audit_id_idx on public.repo_change_runs (audit_id);
+
+-- Row Level Security
+alter table public.site_copy enable row level security;
+alter table public.analytics_events enable row level security;
+alter table public.agent_brain_logs enable row level security;
+alter table public.leads enable row level security;
+alter table public.lead_discovery_runs enable row level security;
+alter table public.site_audits enable row level security;
+alter table public.audit_competitors enable row level security;
+alter table public.audit_pages enable row level security;
+alter table public.audit_findings enable row level security;
+alter table public.audit_social_profiles enable row level security;
+alter table public.linked_repositories enable row level security;
+alter table public.repo_change_runs enable row level security;
+
+create policy "Public read site_copy"
+  on public.site_copy for select
+  to anon, authenticated
+  using (true);
+
+create policy "Public insert analytics_events"
+  on public.analytics_events for insert
+  to anon, authenticated
+  with check (true);
+
+create policy "Public read analytics_events"
+  on public.analytics_events for select
+  to anon, authenticated
+  using (true);
+
+create policy "Public read agent_brain_logs"
+  on public.agent_brain_logs for select
+  to anon, authenticated
+  using (true);
+
+create policy "Public read leads"
+  on public.leads for select
+  to anon, authenticated
+  using (true);
+
+create policy "Public read lead_discovery_runs"
+  on public.lead_discovery_runs for select
+  to anon, authenticated
+  using (true);
+
+create policy "Public read site_audits"
+  on public.site_audits for select
+  to anon, authenticated
+  using (true);
+
+create policy "Public read audit_competitors"
+  on public.audit_competitors for select
+  to anon, authenticated
+  using (true);
+
+create policy "Public read audit_pages"
+  on public.audit_pages for select
+  to anon, authenticated
+  using (true);
+
+create policy "Public read audit_findings"
+  on public.audit_findings for select
+  to anon, authenticated
+  using (true);
+
+create policy "Public read audit_social_profiles"
+  on public.audit_social_profiles for select
+  to anon, authenticated
+  using (true);
+
+create policy "Public read linked_repositories"
+  on public.linked_repositories for select
+  to anon, authenticated
+  using (true);
+
+create policy "Public read repo_change_runs"
+  on public.repo_change_runs for select
+  to anon, authenticated
+  using (true);
+
+-- Supabase Realtime
+alter publication supabase_realtime add table public.site_copy;
+alter publication supabase_realtime add table public.analytics_events;
+alter publication supabase_realtime add table public.agent_brain_logs;
+alter publication supabase_realtime add table public.leads;
+alter publication supabase_realtime add table public.site_audits;
+
+-- Leads are seeded via Run Discovery on /leads (not SQL).
