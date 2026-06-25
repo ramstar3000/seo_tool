@@ -3,6 +3,7 @@ import { anthropic } from '@ai-sdk/anthropic';
 import { runResearchAgent } from '@/lib/research/agent';
 import { convertAuditRequestToLead } from '@/lib/leads/convert-from-audit';
 import { inferKeywordFromWebsite } from '@/lib/leads/infer-keyword';
+import { sendAuditCompleteEmail } from '@/lib/email/send-audit-complete';
 import { notifySlack } from '@/lib/notifications/slack';
 import {
   createPendingAudit,
@@ -130,6 +131,12 @@ export async function processAuditRequest(requestId: string): Promise<void> {
         .filter(Boolean)
         .join('\n')
     );
+
+    void sendAuditCompleteEmail({
+      to: request.email as string,
+      businessName,
+      auditRequestId: requestId,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Audit failed';
 

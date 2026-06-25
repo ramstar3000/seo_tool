@@ -49,6 +49,14 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error || !data) {
+    console.error('[audit-request] insert failed:', error?.code, error?.message);
+    if (error?.code === 'PGRST205') {
+      return apiError(
+        'Database schema not applied. Run supabase/schema.sql in your Supabase SQL editor.',
+        503,
+        'SCHEMA_NOT_READY'
+      );
+    }
     return apiError('Failed to create audit request', 500, 'DB_ERROR');
   }
 

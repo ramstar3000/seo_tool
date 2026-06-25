@@ -47,6 +47,10 @@ function isProtectedApiRoute(pathname: string, method: string, request: NextRequ
     return true;
   }
 
+  if (pathname === '/api/leads' && method === 'GET') {
+    return true;
+  }
+
   if (pathname === '/api/optimize' && (method === 'POST' || method === 'GET')) {
     return !isCronAuthorized(request);
   }

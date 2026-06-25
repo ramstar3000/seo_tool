@@ -20,4 +20,6 @@ export function getAnthropicClient(): Anthropic {
   return client;
 }
 
-export const RESEARCH_AGENT_MODEL = 'claude-3-5-haiku-latest';
+/** Override with ANTHROPIC_MODEL env var if Anthropic deprecates this id. */
+export const RESEARCH_AGENT_MODEL =
+  process.env.ANTHROPIC_MODEL ?? 'claude-haiku-4-5';
