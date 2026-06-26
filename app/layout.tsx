@@ -20,9 +20,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SynapseCRO: AI-Powered Landing Pages for London Local Businesses",
+  title: "SynapseCRO — Landing Pages that Convert for Local Businesses",
   description:
-    "SynapseCRO builds AI-powered landing pages to boost leads for London local businesses. Track visitor behavior, clicks, and real-time conversion updates.",
+    "SynapseCRO creates high-converting AI-powered landing pages for London local businesses. Boost leads, track visitor behavior, and get real-time conversion insights.",
 };
 
 export default function RootLayout({
