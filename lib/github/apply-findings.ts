@@ -1,11 +1,12 @@
-import { runLlmText } from '@/lib/llm/generate';
+import { z } from 'zod';
+import { runLlmObject } from '@/lib/llm/generate';
 import { githubFetch } from '@/lib/github/client';
 import {
   filterSafeFileChanges,
   MAX_FILES_PER_PR,
   pickCandidatePaths,
 } from '@/lib/github/path-guardrails';
-import type { AuditFindingInput, FileChange } from '@/lib/github/types';
+import type { AuditFindingInput, FileChange, FileEdit } from '@/lib/github/types';
 import {
   buildGitHubChangesUserPrompt,
   GITHUB_CHANGES_SYSTEM_PROMPT,
@@ -56,33 +57,67 @@ async function fetchFileContent(
   }
 }
 
-function parseChangesJson(raw: string): FileChange[] {
-  const trimmed = raw.trim();
-  const jsonText = trimmed.startsWith('[')
-    ? trimmed
-    : trimmed.match(/\[[\s\S]*\]/)?.[0];
+const FileEditSchema = z.object({
+  path: z.string(),
+  oldString: z.string(),
+  newString: z.string(),
+  message: z.string().optional(),
+});
 
-  if (!jsonText) {
-    throw new Error('Model did not return a JSON array of file changes');
+const EditsResponseSchema = z.object({
+  edits: z.array(FileEditSchema),
+});
+
+function normalizeEdits(raw: z.infer<typeof EditsResponseSchema>): FileEdit[] {
+  return raw.edits
+    // A no-op edit (old === new) or empty match can't replace anything; drop it.
+    .filter((e) => e.oldString.length > 0 && e.oldString !== e.newString)
+    .map((e) => ({
+      path: e.path,
+      oldString: e.oldString,
+      newString: e.newString,
+      message: e.message?.trim() || 'Apply SEO/CRO improvements',
+    }));
+}
+
+/**
+ * Apply surgical find/replace edits to the original file contents. Each edit's
+ * oldString must match its file exactly and uniquely; non-matching or ambiguous
+ * edits are skipped (not force-applied) so we never corrupt untouched code.
+ * Returns one FileChange per touched file with the recomputed full content.
+ */
+function applyEditsToFiles(
+  edits: FileEdit[],
+  fileContents: Array<{ path: string; content: string }>
+): FileChange[] {
+  const originalByPath = new Map(fileContents.map((f) => [f.path, f.content]));
+  const working = new Map<string, { content: string; messages: string[] }>();
+
+  for (const edit of edits) {
+    const base = working.get(edit.path)?.content ?? originalByPath.get(edit.path);
+    if (base === undefined) continue; // path not among provided files
+
+    const firstIdx = base.indexOf(edit.oldString);
+    if (firstIdx === -1) continue; // snippet not found — skip rather than guess
+    const lastIdx = base.lastIndexOf(edit.oldString);
+    if (firstIdx !== lastIdx) continue; // ambiguous (multiple matches) — skip
+
+    const nextContent =
+      base.slice(0, firstIdx) + edit.newString + base.slice(firstIdx + edit.oldString.length);
+
+    const entry = working.get(edit.path) ?? { content: base, messages: [] };
+    entry.content = nextContent;
+    entry.messages.push(edit.message);
+    working.set(edit.path, entry);
   }
 
-  const parsed = JSON.parse(jsonText) as unknown;
-  if (!Array.isArray(parsed)) {
-    throw new Error('Expected a JSON array of file changes');
-  }
-
-  return parsed
-    .map((item) => {
-      if (!item || typeof item !== 'object') return null;
-      const row = item as Record<string, unknown>;
-      if (typeof row.path !== 'string' || typeof row.content !== 'string') return null;
-      return {
-        path: row.path,
-        content: row.content,
-        message: typeof row.message === 'string' ? row.message : 'Apply SEO/CRO improvements',
-      };
-    })
-    .filter((item): item is FileChange => item !== null);
+  return [...working.entries()]
+    .filter(([path, entry]) => entry.content !== originalByPath.get(path))
+    .map(([path, entry]) => ({
+      path,
+      content: entry.content,
+      message: entry.messages.join('; ') || 'Apply SEO/CRO improvements',
+    }));
 }
 
 export async function applyFindingsToRepo(params: {
@@ -115,7 +150,7 @@ export async function applyFindingsToRepo(params: {
     throw new Error('Could not read candidate file contents from repository');
   }
 
-  const textBlock = await runLlmText({
+  const response = await runLlmObject({
     system: GITHUB_CHANGES_SYSTEM_PROMPT,
     prompt: buildGitHubChangesUserPrompt({
       businessName,
@@ -124,18 +159,23 @@ export async function applyFindingsToRepo(params: {
       files: fileContents,
       seoContext,
     }),
-    maxOutputTokens: 8192,
+    schema: EditsResponseSchema,
     telemetry: { functionId: 'github-apply-findings' },
   });
 
-  const rawChanges = parseChangesJson(textBlock);
+  const edits = normalizeEdits(response);
   const allowedPaths = new Set(fileContents.map((f) => f.path));
-  const safeChanges = filterSafeFileChanges(
-    rawChanges.filter((c) => allowedPaths.has(c.path))
+  const changes = applyEditsToFiles(
+    edits.filter((e) => allowedPaths.has(e.path)),
+    fileContents
   );
+  const safeChanges = filterSafeFileChanges(changes);
 
   if (safeChanges.length === 0) {
-    throw new Error('No safe file changes generated (check path guardrails or findings)');
+    throw new Error(
+      'No applicable edits were generated. The model may not have found exact text to change ' +
+        '(check the linked content path hints and audit findings), then retry.'
+    );
   }
 
   const summary = safeChanges.map((c) => c.message).join('; ');

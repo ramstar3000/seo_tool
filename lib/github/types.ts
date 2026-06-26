@@ -37,6 +37,18 @@ export interface FileChange {
   message: string;
 }
 
+/**
+ * A surgical edit the model proposes: replace an exact `oldString` snippet
+ * copied verbatim from the file with `newString`. Applied server-side so
+ * untouched lines stay byte-identical (no whole-file rewrites).
+ */
+export interface FileEdit {
+  path: string;
+  oldString: string;
+  newString: string;
+  message: string;
+}
+
 export interface AuditFindingInput {
   severity: string;
   category: string;

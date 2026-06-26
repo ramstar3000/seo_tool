@@ -19,7 +19,7 @@ export function getGeminiApiKey(): string | undefined {
 }
 
 export function getGeminiModel(): string {
-  return process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+  return process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
 }
 
 /** All-time LLM spend cap in USD (default $30). Applies to Gemini and Anthropic usage. */
