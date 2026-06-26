@@ -54,6 +54,7 @@ export {
   getSocialSummaryByLeadId,
   persistResearchAudit,
 } from '@/lib/research/persist';
-export type { SavedAudit, AuditDetail } from '@/lib/research/persist';
+export type { SavedAudit } from '@/lib/research/persist';
+export type { AuditDetail } from '@/lib/research/types';
 export * from '@/lib/research/schemas';
 export * from '@/lib/research/types';

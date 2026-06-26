@@ -1,5 +1,10 @@
+import 'server-only';
+
+import { isLightAuditTrace } from '@/lib/leads/is-light-audit';
 import { findCompetitors, parseBusinessName } from '@/lib/research/serp';
 import type { SerpOrganicResult } from '@/lib/research/types';
+
+export { isLightAuditTrace };
 
 export interface MustDoItem {
   title: string;
@@ -172,13 +177,3 @@ export async function runLightLeadAudit(params: {
   };
 }
 
-export function isLightAuditTrace(toolTrace: unknown): boolean {
-  if (!Array.isArray(toolTrace)) return false;
-  return toolTrace.some(
-    (entry) =>
-      entry &&
-      typeof entry === 'object' &&
-      'toolName' in entry &&
-      (entry as { toolName: string }).toolName === 'light_serp_scan'
-  );
-}

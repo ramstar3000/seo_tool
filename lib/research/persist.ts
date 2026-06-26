@@ -1,8 +1,11 @@
+import 'server-only';
+
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { recordAuditInsights } from '@/lib/clickhouse/seo-insights';
 import { extractPageSpeedFromTrace } from '@/lib/research/pagespeed';
 import type {
   AuditCompetitor,
+  AuditDetail,
   AuditFinding,
   AuditPage,
   AuditSocialProfile,
@@ -126,15 +129,7 @@ export async function saveAuditToSupabase(
   return { auditId };
 }
 
-export interface AuditDetail extends SiteAudit {
-  competitors: Array<AuditCompetitor & { id: string }>;
-  pages: Array<AuditPage & { id: string }>;
-  findings: Array<AuditFinding & { id: string }>;
-  socialProfiles: Array<AuditSocialProfile & { id: string; platform_name?: string }>;
-  socialPresence: SocialPresenceSnapshot | null;
-  pageSpeed: ReturnType<typeof extractPageSpeedFromTrace>;
-  auto_pr?: { pr_url: string; pr_number: number | null } | null;
-}
+export type { AuditDetail };
 
 export async function getAuditById(
   supabase: SupabaseClient,

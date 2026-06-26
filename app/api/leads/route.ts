@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiError, apiNotConfigured } from '@/lib/api/errors';
 import { requireAdmin } from '@/lib/auth/require-admin';
-import { isLightAuditTrace } from '@/lib/leads/light-audit';
+import { isLightAuditTrace } from '@/lib/leads/is-light-audit';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 export async function GET(request: NextRequest) {

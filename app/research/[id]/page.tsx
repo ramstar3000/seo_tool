@@ -6,8 +6,8 @@ import { LinkedRepositoriesPanel } from '@/components/LinkedRepositoriesPanel';
 import { ReportSkeleton } from '@/components/LoadingSkeleton';
 import { SocialPresencePanel } from '@/components/SocialPresencePanel';
 import { PageContainer, SurfaceCard } from '@/components/ui/PageContainer';
-import { isLightAuditTrace } from '@/lib/leads/light-audit';
-import type { AuditDetail } from '@/lib/research/persist';
+import { isLightAuditTrace } from '@/lib/leads/is-light-audit';
+import type { AuditDetail } from '@/lib/research/types';
 
 function SeverityBadge({ severity }: { severity: string }) {
   const styles =

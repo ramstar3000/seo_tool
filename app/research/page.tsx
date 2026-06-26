@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { TableSkeleton } from '@/components/LoadingSkeleton';
 import { useToast } from '@/components/Toast';
 import { PageContainer, SurfaceCard } from '@/components/ui/PageContainer';
+import { isLightAuditTrace } from '@/lib/leads/is-light-audit';
 import type { SiteAudit } from '@/lib/research/types';
 
 export default function ResearchListPage() {
@@ -63,6 +64,7 @@ export default function ResearchListPage() {
                   <tr className="bg-white/[0.02] text-left text-zinc-400 border-b border-white/[0.06]">
                     <th className="px-4 py-3 font-medium">Business</th>
                     <th className="px-4 py-3 font-medium">Keyword</th>
+                    <th className="px-4 py-3 font-medium">Type</th>
                     <th className="px-4 py-3 font-medium">Status</th>
                     <th className="px-4 py-3 font-medium">Date</th>
                     <th className="px-4 py-3 font-medium">Report</th>
@@ -71,7 +73,7 @@ export default function ResearchListPage() {
                 <tbody>
                   {audits.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-10 text-center text-zinc-500">
+                      <td colSpan={6} className="px-4 py-10 text-center text-zinc-500">
                         No audits yet. Run one from the leads page.
                       </td>
                     </tr>
@@ -83,6 +85,17 @@ export default function ResearchListPage() {
                           <div className="text-xs text-zinc-500 truncate max-w-xs">{audit.target_url}</div>
                         </td>
                         <td className="px-4 py-3 text-zinc-400">{audit.keyword}</td>
+                        <td className="px-4 py-3">
+                          {isLightAuditTrace(audit.tool_trace) ? (
+                            <span className="inline-flex px-2 py-0.5 rounded-md text-xs bg-sky-500/10 text-sky-300 border border-sky-500/25">
+                              SERP scan
+                            </span>
+                          ) : (
+                            <span className="inline-flex px-2 py-0.5 rounded-md text-xs bg-teal-500/10 text-teal-300 border border-teal-500/25">
+                              Full audit
+                            </span>
+                          )}
+                        </td>
                         <td className="px-4 py-3 capitalize text-zinc-300">{audit.status}</td>
                         <td className="px-4 py-3 text-zinc-500">
                           {new Date(audit.created_at).toLocaleDateString()}

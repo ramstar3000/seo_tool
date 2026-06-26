@@ -161,3 +161,13 @@ export interface SocialPresenceSnapshot {
   searched: boolean;
   inconsistencies: SocialMessagingIssue[];
 }
+
+export interface AuditDetail extends SiteAudit {
+  competitors: Array<AuditCompetitor & { id: string }>;
+  pages: Array<AuditPage & { id: string }>;
+  findings: Array<AuditFinding & { id: string }>;
+  socialProfiles: Array<AuditSocialProfile & { id: string; platform_name?: string }>;
+  socialPresence: SocialPresenceSnapshot | null;
+  pageSpeed: PageSpeedSnapshot | null;
+  auto_pr?: { pr_url: string; pr_number: number | null } | null;
+}

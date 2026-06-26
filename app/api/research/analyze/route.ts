@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireUser } from '@/lib/auth/require-user';
-import { isLightAuditTrace } from '@/lib/leads/light-audit';
+import { isLightAuditTrace } from '@/lib/leads/is-light-audit';
 import { runResearchAgent } from '@/lib/research/agent';
 import {
   createPendingAudit,
