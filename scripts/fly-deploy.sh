@@ -26,14 +26,14 @@ fi
 
 echo "==> Checking required secrets..."
 for name in SUPABASE_URL SUPABASE_PUBLISHABLE_KEY SUPABASE_SECRET_KEY GEMINI_API_KEY ANTHROPIC_API_KEY; do
-  if ! fly secrets list -a "${APP}" 2>/dev/null | grep -q "^${name}"; then
+  if ! fly secrets list -a "${APP}" 2>/dev/null | awk '{print $1}' | grep -qx "${name}"; then
     echo "Missing secret: ${name}"
     echo "Run: fly secrets import < .env"
     exit 1
   fi
 done
 
-if ! fly secrets list -a "${APP}" 2>/dev/null | grep -q "^CRON_SECRET"; then
+if ! fly secrets list -a "${APP}" 2>/dev/null | awk '{print $1}' | grep -qx CRON_SECRET; then
   echo "Warning: CRON_SECRET not set. Scheduled jobs will 401 until you run:"
   echo "  fly secrets set CRON_SECRET=\"\$(openssl rand -hex 32)\" -a ${APP}"
 fi
