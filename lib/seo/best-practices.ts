@@ -7,7 +7,8 @@ export type SeoPracticeCategory =
   | 'On-page'
   | 'CRO overlap'
   | 'Technical SEO'
-  | 'Content';
+  | 'Content'
+  | 'LLM discoverability';
 
 export interface SeoBestPractice {
   id: string;
@@ -25,6 +26,7 @@ export const SEO_PRACTICE_CATEGORIES: SeoPracticeCategory[] = [
   'CRO overlap',
   'Technical SEO',
   'Content',
+  'LLM discoverability',
 ];
 
 export interface LeadRecommendationInput {
@@ -383,6 +385,56 @@ export const SEO_BEST_PRACTICES: SeoBestPractice[] = [
     priority: 'medium',
     appliesTo: ['has-website', 'local-service'],
     source: 'Semrush; Google structured data docs',
+  },
+  {
+    id: 'ssr-visible-html',
+    category: 'LLM discoverability',
+    title: 'Serve meaningful HTML without JavaScript',
+    description:
+      'AI crawlers often skip JS execution. Use SSR/SSG so title, H1, and body copy appear in curl / view-source — CSR-only shells are partially invisible to LLMs.',
+    priority: 'high',
+    appliesTo: ['has-website'],
+    source: 'LLM SEO / Vercel AI crawler research',
+  },
+  {
+    id: 'opening-summary-rag',
+    category: 'LLM discoverability',
+    title: 'Lead with a standalone opening summary',
+    description:
+      'First paragraph should summarize the page in 2–3 sentences: local = who/where/service; personal = who/expertise; global = product/problem solved. Acts as an RAG embedding anchor.',
+    priority: 'high',
+    appliesTo: ['has-website'],
+    source: 'LLM SEO (RAG retrieval best practice)',
+  },
+  {
+    id: 'semantic-html-structure',
+    category: 'LLM discoverability',
+    title: 'Use semantic heading hierarchy and scannable layout',
+    description:
+      'One H1, nested H2/H3, bullet lists over text walls. Clear structure improves semantic similarity matching in AI search — not just traditional rankings.',
+    priority: 'medium',
+    appliesTo: ['has-website'],
+    source: 'LLM SEO',
+  },
+  {
+    id: 'llms-txt',
+    category: 'LLM discoverability',
+    title: 'Add llms.txt at the site root (optional)',
+    description:
+      'Emerging convention to document AI usage preferences (similar spirit to robots.txt). Low effort, no SEO downside — signals transparency to AI systems.',
+    priority: 'medium',
+    appliesTo: ['has-website'],
+    source: 'llms.txt proposal',
+  },
+  {
+    id: 'index-before-llm',
+    category: 'LLM discoverability',
+    title: 'Fix Google/Bing indexability before LLM tactics',
+    description:
+      'LLM search retrieves from indexed web content. Valid sitemap, robots.txt, and Search Console coverage are prerequisites — LLM SEO builds on traditional SEO.',
+    priority: 'high',
+    appliesTo: ['has-website'],
+    source: 'Google Search Central; LLM SEO',
   },
 ];
 

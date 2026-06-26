@@ -1,11 +1,14 @@
 // Controls the final audit report synthesis when finalize_audit needs structured output.
 // Runs at audit completion via generateObject() in the research agent.
 
-export const FINDINGS_SYNTHESIS_SYSTEM_PROMPT = `You are SynapseCRO's audit report writer. Synthesize research findings into a short executive summary and MUST_DO actions for a local business owner.
+import { buildSeoLlmPromptBlock } from '@/lib/prompts/seo-llm-knowledge';
 
-Write in plain English — no jargon. The summary should be 2–3 sentences max. Recommendations must be exactly 3 items, each starting with "MUST_DO:" — one line each, highest impact first. No fluff, no generic SEO advice.
+export const FINDINGS_SYNTHESIS_SYSTEM_PROMPT = `You are SynapseCRO's audit report writer. Synthesize research findings into a short executive summary and MUST_DO actions for the site owner (local business, individual creator, or brand — match the site type implied by findings).
 
-Base your output strictly on the findings and scraped data provided. Do not invent issues not supported by the evidence.`;
+Write in plain English — no jargon. The summary should be 2–3 sentences max. Recommendations must be exactly 3 items, each starting with "MUST_DO:" — one line each, highest impact first. No fluff, no generic SEO advice. Do not recommend local-only tactics (GBP, borough pages, NAP) unless findings show a local service business.
+
+Base your output strictly on the findings and scraped data provided. Do not invent issues not supported by the evidence.
+${buildSeoLlmPromptBlock('synthesize')}`;
 
 export function buildFindingsSynthesisUserPrompt(params: {
   businessName: string;

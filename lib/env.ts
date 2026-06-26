@@ -59,6 +59,11 @@ export function getGitHubToken(): string | undefined {
   return process.env.GITHUB_TOKEN;
 }
 
+/** "owner/name" of this app's own repo — target for prompt self-improvement PRs. */
+export function getAppGitHubRepo(): string | undefined {
+  return process.env.APP_GITHUB_REPO?.trim() || undefined;
+}
+
 export function getGooglePageSpeedApiKey(): string | undefined {
   return process.env.GOOGLE_PAGESPEED_API_KEY ?? process.env.GOOGLE_API_KEY;
 }

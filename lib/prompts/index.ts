@@ -21,3 +21,12 @@ export {
   VISITOR_AUDIT_SYSTEM_PROMPT,
   buildVisitorAuditUserPrompt,
 } from '@/lib/prompts/visitor-audit';
+export {
+  buildSeoLlmPromptBlock,
+  buildSiteContextHint,
+  SEO_LLM_AUDIT_RUBRIC,
+  SEO_LLM_EDIT_PRIORITIES,
+  SEO_LLM_SYNTHESIS_HINT,
+  SEO_SITE_TYPE_CLASSIFICATION,
+} from '@/lib/prompts/seo-llm-knowledge';
+export type { SeoSiteType } from '@/lib/prompts/seo-llm-knowledge';
