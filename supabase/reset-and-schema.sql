@@ -189,6 +189,19 @@ create index audit_pages_audit_id_idx on public.audit_pages (audit_id);
 create index audit_findings_audit_id_idx on public.audit_findings (audit_id);
 create index audit_social_profiles_audit_id_idx on public.audit_social_profiles (audit_id);
 
+create table public.audit_fix_packs (
+  id uuid primary key default gen_random_uuid(),
+  audit_id uuid not null references public.site_audits(id) on delete cascade unique,
+  platform_id text not null,
+  platform_label text not null,
+  pack_json jsonb not null default '{}'::jsonb,
+  status text not null default 'pending' check (status in ('pending', 'completed', 'failed')),
+  error_message text,
+  created_at timestamptz default now()
+);
+
+create index audit_fix_packs_audit_id_idx on public.audit_fix_packs (audit_id);
+
 -- 6. Linked GitHub Repositories & PR Change Runs
 create table public.linked_repositories (
   id uuid primary key default gen_random_uuid(),
@@ -254,6 +267,7 @@ alter table public.audit_competitors enable row level security;
 alter table public.audit_pages enable row level security;
 alter table public.audit_findings enable row level security;
 alter table public.audit_social_profiles enable row level security;
+alter table public.audit_fix_packs enable row level security;
 alter table public.linked_repositories enable row level security;
 alter table public.repo_change_runs enable row level security;
 alter table public.audit_requests enable row level security;
@@ -309,6 +323,11 @@ create policy "Public read audit_findings"
 
 create policy "Public read audit_social_profiles"
   on public.audit_social_profiles for select
+  to anon, authenticated
+  using (true);
+
+create policy "Public read audit_fix_packs"
+  on public.audit_fix_packs for select
   to anon, authenticated
   using (true);
 

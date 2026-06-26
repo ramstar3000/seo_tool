@@ -31,4 +31,5 @@ export type {
   FileChange,
   AuditFindingInput,
   GitHubInstallationSummary,
+  RepositoryListItem,
 } from '@/lib/github/types';

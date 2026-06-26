@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { LinkedRepositoriesPanel } from '@/components/LinkedRepositoriesPanel';
+import { FixPackPanel } from '@/components/FixPackPanel';
 import { ReportSkeleton } from '@/components/LoadingSkeleton';
 import { ResearchTierGuide } from '@/components/ResearchTierGuide';
 import { SocialPresencePanel } from '@/components/SocialPresencePanel';
 import { PageContainer, SurfaceCard } from '@/components/ui/PageContainer';
 import { isLightAuditTrace } from '@/lib/leads/is-light-audit';
+import { detectPlatformFromUrl, isNoCodePlatform } from '@/lib/fix-pack/platforms';
 import type { AuditDetail } from '@/lib/research/types';
 
 function SeverityBadge({ severity }: { severity: string }) {
@@ -128,6 +130,11 @@ export default function ResearchAuditPage({ params }: { params: Promise<{ id: st
       ) ?? [],
     [audit]
   );
+
+  const noCodePrimary = useMemo(() => {
+    if (!audit) return false;
+    return isNoCodePlatform(detectPlatformFromUrl(audit.target_url));
+  }, [audit]);
 
   if (isLoading) {
     return (
@@ -281,6 +288,16 @@ export default function ResearchAuditPage({ params }: { params: Promise<{ id: st
             <h2 className="text-lg font-semibold text-teal-200">Recommended fixes</h2>
             <p className="text-zinc-300 leading-relaxed whitespace-pre-wrap">{audit.recommendations}</p>
           </SurfaceCard>
+        )}
+
+        {!isLightScan && audit.status === 'completed' && (
+          <section className="space-y-4">
+            <FixPackPanel
+              auditId={audit.id}
+              businessName={audit.business_name}
+              noCodePrimary={noCodePrimary}
+            />
+          </section>
         )}
 
         {seoFindings.length > 0 && (

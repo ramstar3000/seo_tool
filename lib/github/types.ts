@@ -24,6 +24,24 @@ export interface GitHubInstallationSummary {
   account_type: 'User' | 'Organization';
 }
 
+/** Repo returned by GitHub GET /installation/repositories. */
+export interface GitHubInstallationRepo {
+  full_name: string;
+  html_url: string;
+  private: boolean;
+  default_branch: string;
+}
+
+/** Settings page: GitHub App repo merged with optional lead link. */
+export interface RepositoryListItem {
+  full_name: string;
+  html_url: string;
+  default_branch: string;
+  private?: boolean;
+  app_access: boolean;
+  linked: LinkedRepository | null;
+}
+
 export interface RepoChangeRun {
   id: string;
   repository_id: string;

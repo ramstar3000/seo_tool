@@ -2,10 +2,12 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { FixPackPanel } from '@/components/FixPackPanel';
 import { ReportSkeleton } from '@/components/LoadingSkeleton';
 import { PageSpeedPanel } from '@/components/PageSpeedPanel';
 import { PageContainer, SurfaceCard } from '@/components/ui/PageContainer';
 import { scoreLabel } from '@/lib/audit/score';
+import { detectPlatformFromUrl, isNoCodePlatform } from '@/lib/fix-pack/platforms';
 
 interface AuditFinding {
   severity: string;
@@ -255,6 +257,9 @@ export default function VisitorAuditPage({ params }: { params: Promise<{ id: str
   const isRunning = data?.status === 'pending' || data?.status === 'processing';
   const socialFound = data?.socialProfiles.filter((p) => p.status === 'found').length ?? 0;
   const socialTotal = data?.socialProfiles.length ?? 0;
+  const noCodePrimary = data?.websiteUrl
+    ? isNoCodePlatform(detectPlatformFromUrl(data.websiteUrl))
+    : false;
 
   return (
     <main className="flex-1">
@@ -390,21 +395,30 @@ export default function VisitorAuditPage({ params }: { params: Promise<{ id: str
               </section>
             )}
 
-            <SurfaceCard className="p-5 sm:p-6 space-y-3 border-teal-500/20 bg-teal-500/[0.03]">
-              <h2 className="text-lg font-semibold text-teal-200">Need help fixing these?</h2>
-              <p className="text-sm text-zinc-300 leading-relaxed">
-                We can update your landing page, address SEO issues, and open GitHub pull requests
-                with suggested changes.
+            <section className="space-y-3">
+              <h2 className="text-lg font-semibold text-violet-200">Apply fixes in your builder</h2>
+              <p className="text-sm text-zinc-400 leading-relaxed">
+                {noCodePrimary
+                  ? 'Your site is on a no-code platform — use the fix pack for copy-paste SEO values, step-by-step playbooks, and a printable checklist.'
+                  : 'Get copy-paste SEO values, platform playbooks, schema snippets, and a checklist — or link GitHub for automated fix PRs.'}
               </p>
-              <a
-                href="mailto:hello@synapsecro.com?subject=Help%20with%20my%20website%20audit"
-                className="inline-flex min-h-11 items-center px-5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium transition-colors"
-              >
-                Get in touch
-              </a>
-            </SurfaceCard>
+              {data.auditId ? (
+                <FixPackPanel
+                  auditId={data.auditId}
+                  businessName={data.businessName ?? title}
+                  noCodePrimary={noCodePrimary}
+                />
+              ) : data.researchUrl ? (
+                <Link
+                  href={`${data.researchUrl}#fix-pack`}
+                  className="inline-flex min-h-11 items-center px-5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors"
+                >
+                  Open fix pack
+                </Link>
+              ) : null}
+            </section>
 
-            {data.researchUrl && (
+            {data.researchUrl && data.auditId && (
               <p className="text-sm text-zinc-400">
                 Full technical report:{' '}
                 <Link href={data.researchUrl} className="text-teal-400 hover:underline">

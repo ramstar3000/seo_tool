@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { autoGenerateFixPackFromAudit } from '@/lib/fix-pack/auto-generate-from-audit';
 import { runResearchAgent } from '@/lib/research/agent';
 import {
   createPendingAudit,
@@ -50,6 +51,14 @@ export async function runAndPersistLeadAudit(
       .from('leads')
       .update({ last_audit_id: auditId, updated_at: new Date().toISOString() })
       .eq('id', params.leadId);
+
+    void autoGenerateFixPackFromAudit({
+      supabase,
+      auditId,
+      targetUrl: params.targetUrl,
+    }).catch((err) => {
+      console.error('[runAndPersistLeadAudit] fix-pack generation failed:', err);
+    });
 
     return auditId;
   } catch (error) {

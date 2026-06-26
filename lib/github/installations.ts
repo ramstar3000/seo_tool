@@ -20,7 +20,7 @@ interface GitHubInstallationApiResponse {
   };
 }
 
-interface InstallationRepoItem {
+export interface InstallationRepoItem {
   id: number;
   name: string;
   full_name: string;

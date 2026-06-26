@@ -15,6 +15,7 @@ import {
   VISITOR_AUDIT_SYSTEM_PROMPT,
 } from '@/lib/prompts/visitor-audit';
 import { autoApplyFromAudit } from '@/lib/github/auto-apply-from-audit';
+import { autoGenerateFixPackFromAudit } from '@/lib/fix-pack/auto-generate-from-audit';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 async function buildVisitorReportSummary(params: {
@@ -129,6 +130,14 @@ export async function processAuditRequest(requestId: string): Promise<void> {
       });
     }
 
+    void autoGenerateFixPackFromAudit({
+      supabase,
+      auditId,
+      targetUrl: request.website_url as string,
+    }).catch((err) => {
+      console.error('[process-audit-request] fix-pack generation failed:', err);
+    });
+
     void notifySlack(
       [
         '✅ Visitor audit completed',
@@ -152,6 +161,7 @@ export async function processAuditRequest(requestId: string): Promise<void> {
       to: request.email as string,
       businessName,
       auditRequestId: requestId,
+      siteAuditId: auditId,
       websiteUrl: request.website_url as string,
       score: computeAuditScore(emailFindings),
       reportSummary,

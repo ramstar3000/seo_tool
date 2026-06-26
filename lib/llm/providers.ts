@@ -1,4 +1,5 @@
-import { runLlmText } from '@/lib/llm/generate';
+import { z } from 'zod';
+import { runLlmObject } from '@/lib/llm/generate';
 
 export interface OptimizeDecision {
   thought_process: string;
@@ -11,48 +12,24 @@ export interface OptimizeDecision {
   };
 }
 
-function parseOptimizeDecision(raw: unknown): OptimizeDecision {
-  if (!raw || typeof raw !== 'object') {
-    throw new Error('Invalid optimization response');
-  }
+const optimizeDecisionSchema = z.object({
+  thought_process: z.string(),
+  action_taken: z.string(),
+  updates: z.record(z.string(), z.string().optional()),
+});
 
-  const decision = raw as Partial<OptimizeDecision>;
-  if (
-    typeof decision.thought_process !== 'string' ||
-    typeof decision.action_taken !== 'string' ||
-    !decision.updates ||
-    typeof decision.updates !== 'object'
-  ) {
-    throw new Error('Invalid optimization response');
-  }
+export async function runOptimizationLLM(prompt: string): Promise<OptimizeDecision> {
+  const decision = await runLlmObject({
+    system:
+      'You are a CRO agent. Return structured JSON with thought_process, action_taken, and updates.',
+    prompt,
+    schema: optimizeDecisionSchema,
+    telemetry: { functionId: 'cro-optimizer' },
+  });
 
   return {
     thought_process: decision.thought_process,
     action_taken: decision.action_taken,
     updates: decision.updates,
   };
-}
-
-function extractJsonContent(content: string): unknown {
-  const trimmed = content.trim();
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (fenceMatch?.[1]) {
-      return JSON.parse(fenceMatch[1].trim());
-    }
-    throw new Error('Invalid optimization response');
-  }
-}
-
-export async function runOptimizationLLM(prompt: string): Promise<OptimizeDecision> {
-  const content = await runLlmText({
-    system: 'Respond with valid JSON only. Do not include markdown fences or extra commentary.',
-    prompt,
-    maxOutputTokens: 1024,
-    telemetry: { functionId: 'cro-optimizer' },
-  });
-
-  return parseOptimizeDecision(extractJsonContent(content));
 }

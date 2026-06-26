@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/auth/require-user';
-import { getInstallationForUser } from '@/lib/github/installations';
+import { getInstallationForUser, listInstallationRepos } from '@/lib/github/installations';
 import { isGitHubAuthAvailable } from '@/lib/github/resolve-auth';
 import { hasGitHubAppConfig } from '@/lib/env';
-import type { GitHubInstallationSummary, LinkedRepository } from '@/lib/github/types';
+import type {
+  GitHubInstallationSummary,
+  LinkedRepository,
+  RepositoryListItem,
+} from '@/lib/github/types';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
@@ -57,6 +61,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  const linkedRepos = (data ?? []).map(mapRepo);
   const installation = await getInstallationForUser(auth.user.id);
   const githubInstallation: GitHubInstallationSummary | null = installation
     ? {
@@ -66,8 +71,66 @@ export async function GET(request: NextRequest) {
       }
     : null;
 
+  let repositoryList: RepositoryListItem[] | undefined;
+
+  if (all) {
+    const linkedByKey = new Map(
+      linkedRepos.map((repo) => [`${repo.github_owner}/${repo.github_repo}`.toLowerCase(), repo])
+    );
+
+    if (installation) {
+      try {
+        const installationRepos = await listInstallationRepos(installation.installation_id);
+        const seen = new Set<string>();
+
+        repositoryList = installationRepos.map((repo) => {
+          const key = repo.full_name.toLowerCase();
+          seen.add(key);
+          const linked = linkedByKey.get(key) ?? null;
+          return {
+            full_name: repo.full_name,
+            html_url: repo.html_url,
+            default_branch: repo.default_branch ?? linked?.default_branch ?? 'main',
+            private: repo.private,
+            app_access: true,
+            linked,
+          };
+        });
+
+        for (const linked of linkedRepos) {
+          const key = `${linked.github_owner}/${linked.github_repo}`.toLowerCase();
+          if (seen.has(key)) continue;
+          repositoryList.push({
+            full_name: `${linked.github_owner}/${linked.github_repo}`,
+            html_url: linked.repo_url,
+            default_branch: linked.default_branch,
+            app_access: false,
+            linked,
+          });
+        }
+      } catch {
+        repositoryList = linkedRepos.map((linked) => ({
+          full_name: `${linked.github_owner}/${linked.github_repo}`,
+          html_url: linked.repo_url,
+          default_branch: linked.default_branch,
+          app_access: Boolean(linked.installation_id),
+          linked,
+        }));
+      }
+    } else {
+      repositoryList = linkedRepos.map((linked) => ({
+        full_name: `${linked.github_owner}/${linked.github_repo}`,
+        html_url: linked.repo_url,
+        default_branch: linked.default_branch,
+        app_access: false,
+        linked,
+      }));
+    }
+  }
+
   return NextResponse.json({
-    repos: (data ?? []).map(mapRepo),
+    repos: linkedRepos,
+    repositoryList,
     githubConfigured: await isGitHubAuthAvailable(auth.user.id),
     githubAppConfigured: hasGitHubAppConfig(),
     githubInstallation,

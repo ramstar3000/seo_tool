@@ -6,6 +6,7 @@ const footerLinks = [
   { href: '/research', label: 'Research' },
   { href: '/seo-guide', label: 'SEO guide' },
   { href: '/dashboard', label: 'Dashboard' },
+  { href: '/clickhouse', label: 'ClickHouse' },
 ];
 
 export function SiteFooter() {

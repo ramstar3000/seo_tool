@@ -10,6 +10,7 @@ import {
   saveAuditToSupabase,
 } from '@/lib/research/persist';
 import { autoApplyFromAudit } from '@/lib/github/auto-apply-from-audit';
+import { autoGenerateFixPackFromAudit } from '@/lib/fix-pack/auto-generate-from-audit';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
@@ -131,6 +132,14 @@ export async function POST(request: NextRequest) {
         console.error('[research/analyze] auto-PR failed:', err);
       });
     }
+
+    void autoGenerateFixPackFromAudit({
+      supabase,
+      auditId: savedId,
+      targetUrl,
+    }).catch((err) => {
+      console.error('[research/analyze] fix-pack generation failed:', err);
+    });
 
     return NextResponse.json({ auditId: savedId });
   } catch (error) {

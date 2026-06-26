@@ -10,6 +10,7 @@ import { PageContainer } from '@/components/ui/PageContainer';
 const publicLinks = [
   { href: '/', label: 'Home' },
   { href: '/dashboard', label: 'Dashboard' },
+  { href: '/clickhouse', label: 'ClickHouse' },
 ];
 
 const authLinks = [

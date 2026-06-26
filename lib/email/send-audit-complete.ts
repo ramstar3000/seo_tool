@@ -11,6 +11,7 @@ export interface SendAuditCompleteParams {
   to: string;
   businessName: string;
   auditRequestId: string;
+  siteAuditId?: string;
   websiteUrl?: string;
   score?: number;
   reportSummary?: string;
@@ -22,6 +23,9 @@ export async function sendAuditCompleteEmail(params: SendAuditCompleteParams): P
   if (!apiKey) return false;
 
   const auditUrl = `${getAppBaseUrl()}/audit/${params.auditRequestId}`;
+  const fixPackUrl = params.siteAuditId
+    ? `${getAppBaseUrl()}/research/${params.siteAuditId}#fix-pack`
+    : null;
   const name = params.businessName || 'there';
   const findings = params.findings ?? [];
   const grouped = groupFindingsByAction(findings);
@@ -57,6 +61,7 @@ export async function sendAuditCompleteEmail(params: SendAuditCompleteParams): P
         html: buildAuditEmailHtml({
           name,
           auditUrl,
+          fixPackUrl,
           websiteUrl: params.websiteUrl,
           scoreText,
           reportSummary: params.reportSummary,
@@ -97,6 +102,7 @@ function buildSubject(businessName: string, score?: number): string {
 function buildAuditEmailHtml(params: {
   name: string;
   auditUrl: string;
+  fixPackUrl: string | null;
   websiteUrl?: string;
   scoreText: string | null;
   reportSummary?: string;
@@ -106,6 +112,7 @@ function buildAuditEmailHtml(params: {
   const {
     name,
     auditUrl,
+    fixPackUrl,
     websiteUrl,
     scoreText,
     reportSummary,
@@ -153,9 +160,12 @@ function buildAuditEmailHtml(params: {
       <a href="${auditUrl}" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600;">
         View full audit report
       </a>
+      ${fixPackUrl ? `<a href="${fixPackUrl}" style="display:inline-block;margin-left:8px;background:#7c3aed;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600;">Get fix pack</a>` : ''}
     </p>
     <p style="margin:0;color:#64748b;font-size:14px;line-height:1.5;">
-      Link your GitHub repo in SynapseCRO and we can open a pull request with SEO fixes for the items marked as code-fixable.
+      ${fixPackUrl
+        ? 'Your fix pack includes copy-paste SEO values, platform playbooks, schema snippets, and a printable checklist — no GitHub repo required.'
+        : 'Link your GitHub repo in SynapseCRO for automated fix PRs, or use the fix pack on your audit report for copy-paste values and platform playbooks.'}
     </p>
     <p style="margin:24px 0 0;color:#94a3b8;font-size:13px;">— SynapseCRO</p>
   </div>
@@ -179,7 +189,7 @@ function buildActionSection(grouped: ReturnType<typeof groupFindingsByAction>): 
   if (grouped.semiAuto.length > 0) {
     sections.push(
       renderActionList(
-        'Quick wins — we can draft copy for you',
+        'In your fix pack — copy-paste copy & playbooks',
         grouped.semiAuto.slice(0, 3),
         '#d97706'
       )
