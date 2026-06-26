@@ -33,7 +33,7 @@ export function getActiveModelId(): string {
     return process.env.ANTHROPIC_MODEL ?? 'claude-haiku-4-5';
   }
   throw new Error(
-    'No LLM provider configured (set GEMINI_API_KEY, GOOGLE_API_KEY, or ANTHROPIC_API_KEY)',
+    'No LLM provider configured (set GEMINI_API_KEY, GOOGLE_GENERATIVE_AI_API_KEY, or ANTHROPIC_API_KEY)',
   );
 }
 
@@ -47,6 +47,6 @@ export function getResearchModel(): LanguageModel {
     return anthropic(modelId);
   }
   throw new Error(
-    'No LLM provider configured (set GEMINI_API_KEY, GOOGLE_API_KEY, or ANTHROPIC_API_KEY)',
+    'No LLM provider configured (set GEMINI_API_KEY, GOOGLE_GENERATIVE_AI_API_KEY, or ANTHROPIC_API_KEY)',
   );
 }

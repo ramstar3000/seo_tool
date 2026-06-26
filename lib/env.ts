@@ -15,11 +15,7 @@ export function getAnthropicApiKey(): string | undefined {
 }
 
 export function getGeminiApiKey(): string | undefined {
-  return (
-    process.env.GEMINI_API_KEY ??
-    process.env.GOOGLE_GENERATIVE_AI_API_KEY ??
-    process.env.GOOGLE_API_KEY
-  );
+  return process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 }
 
 export function getGeminiModel(): string {
@@ -122,4 +118,25 @@ export function hasLlmConfig(): boolean {
 
 export function hasTavilyConfig(): boolean {
   return Boolean(getTavilyApiKey());
+}
+
+/** ClickHouse Cloud URL (e.g. https://xxx.eu-west-1.aws.clickhouse.cloud:8443). */
+export function getClickHouseUrl(): string | undefined {
+  return process.env.CLICKHOUSE_URL?.trim() || undefined;
+}
+
+export function getClickHouseUser(): string {
+  return process.env.CLICKHOUSE_USER?.trim() || 'default';
+}
+
+export function getClickHousePassword(): string {
+  return process.env.CLICKHOUSE_PASSWORD ?? '';
+}
+
+export function getClickHouseDatabase(): string {
+  return process.env.CLICKHOUSE_DATABASE?.trim() || 'default';
+}
+
+export function hasClickHouseConfig(): boolean {
+  return Boolean(getClickHouseUrl() && getClickHousePassword());
 }

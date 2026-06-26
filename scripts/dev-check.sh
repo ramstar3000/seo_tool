@@ -22,9 +22,8 @@ Required for core app (database + auth):
   SUPABASE_SERVICE_ROLE_KEY      Service role key for server-side writes (or SUPABASE_SECRET_KEY)
 
 Required for full agent features:
-  GEMINI_API_KEY                 Primary LLM (Gemini / DeepMind) for agent, CRO, PR edits
-  GOOGLE_GENERATIVE_AI_API_KEY   Alias for GEMINI_API_KEY (@ai-sdk/google convention)
-  GOOGLE_API_KEY                 Alias for GEMINI_API_KEY (common GCP key name)
+  GOOGLE_GENERATIVE_AI_API_KEY   Primary LLM key (Gemini / DeepMind; @ai-sdk/google convention)
+  GEMINI_API_KEY                 Alias for GOOGLE_GENERATIVE_AI_API_KEY (checked first)
   ANTHROPIC_API_KEY              Fallback LLM if Gemini is not configured
 
 Optional — enhanced discovery & scraping:
@@ -40,7 +39,7 @@ Optional — Fly.io / cron (see docs/FLY_DEPLOY.md):
 
 Optional — Core Web Vitals in research audits:
   GOOGLE_PAGESPEED_API_KEY       Google PageSpeed Insights API key (skips gracefully if unset)
-                                 Falls back to GOOGLE_API_KEY when unset
+  GOOGLE_API_KEY                 PageSpeed fallback only (not used for Gemini/LLM)
 
 Optional — Slack notifications:
   SLACK_WEBHOOK_URL              Incoming webhook for audit-complete and PR-created alerts
@@ -54,6 +53,13 @@ Optional — production links in emails:
 
 Optional — database reset script (scripts/reset-and-seed.sh):
   SUPABASE_DB_URL                Direct Postgres URI (or DATABASE_URL)
+
+Optional — ClickHouse (see docs/CLICKHOUSE.md):
+  CLICKHOUSE_URL                 ClickHouse Cloud HTTPS endpoint (:8443)
+  CLICKHOUSE_USER                Username (default: default)
+  CLICKHOUSE_PASSWORD            Password from ClickHouse Cloud
+  CLICKHOUSE_DATABASE            Database name (default: default)
+  Enables: conversion funnel, SEO insight memory, prompt context for GitHub PRs
 
 Optional — reserved for future enrichment:
   GOOGLE_PLACES_API_KEY          Google Places API (not wired yet)
