@@ -75,27 +75,6 @@ function LoginForm() {
     setMessage('Check your email for a sign-in link.');
   }
 
-  async function handleGitHubSignIn() {
-    if (!supabase) return;
-    setIsSubmitting(true);
-    setMessage(null);
-
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'github',
-      options: { redirectTo },
-    });
-
-    if (error) {
-      setMessage(
-        error.message.includes('OAuth')
-          ? `${error.message} — check GitHub OAuth setup in Supabase (see docs/GITHUB_OAUTH_SETUP.md).`
-          : error.message
-      );
-      setIsSubmitting(false);
-    }
-  }
-
   const modeButtonClass = (active: boolean) =>
     `flex-1 min-h-10 rounded-lg text-sm font-medium transition-colors ${
       active
@@ -185,11 +164,13 @@ function LoginForm() {
 
       <button
         type="button"
-        onClick={handleGitHubSignIn}
-        disabled={isSubmitting}
-        className="w-full min-h-11 rounded-xl border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.04] disabled:opacity-60 text-white font-medium transition-colors"
+        disabled
+        aria-disabled="true"
+        title="GitHub sign-in is coming soon"
+        className="w-full min-h-11 rounded-xl border border-white/[0.06] bg-white/[0.01] text-zinc-500 font-medium cursor-not-allowed"
       >
         Continue with GitHub
+        <span className="ml-2 text-xs text-zinc-600">(coming soon)</span>
       </button>
 
       <p className="text-center text-sm text-zinc-400">
