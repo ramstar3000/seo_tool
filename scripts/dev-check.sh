@@ -33,6 +33,7 @@ Optional — enhanced discovery & scraping:
 
 Optional — GitHub PR automation:
   GITHUB_TOKEN                   Personal access token with repo scope
+  GITHUB_PAT_TOKEN               Alias for GITHUB_TOKEN (either name works locally)
 
 Optional — Fly.io / cron (see docs/FLY_DEPLOY.md):
   CRON_SECRET                    Bearer token for POST /api/optimize and GET /api/cron/re-audit-leads
