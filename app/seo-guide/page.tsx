@@ -45,12 +45,20 @@ export default function SeoGuidePage() {
               {categories.length} categories
             </span>
           </div>
-          <Link
-            href="/leads"
-            className="inline-flex min-h-10 items-center text-sm font-medium text-teal-400 hover:text-teal-300"
-          >
-            ← Leads
-          </Link>
+          <div className="mt-6 flex flex-wrap items-center gap-4">
+            <Link
+              href="/audit"
+              className="inline-flex min-h-11 items-center px-6 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-base font-medium transition-colors"
+            >
+              Get Your Free SEO Audit
+            </Link>
+            <Link
+              href="/leads"
+              className="inline-flex min-h-10 items-center text-sm font-medium text-zinc-400 hover:text-zinc-200"
+            >
+              ← All Leads
+            </Link>
+          </div>
         </header>
 
         {categories.map((category) => {
