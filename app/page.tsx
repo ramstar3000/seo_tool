@@ -6,7 +6,7 @@ import { HeroSprayBackground } from '@/components/HeroSprayBackground';
 import { formInputClass, PageContainer, SurfaceCard } from '@/components/ui/PageContainer';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 
-type CtaState = 'idle' | 'modal' | 'submitting' | 'success';
+type CtaState = 'idle' | 'submitting' | 'success';
 
 const DEFAULT_COPY = {
   hero_title: 'Rank higher. Get more visits.',
@@ -116,7 +116,8 @@ export default function Home() {
   const handleCTAClick = () => {
     if (ctaState !== 'idle') return;
     setFormError(null);
-    setCtaState('modal');
+    document.getElementById('audit-website')?.focus();
+    document.getElementById('audit-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     void trackAnalytics('cta_click');
   };
 
@@ -153,7 +154,7 @@ export default function Home() {
       setCtaState('success');
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to submit audit request');
-      setCtaState('modal');
+      setCtaState('idle');
     }
   };
 
@@ -164,58 +165,6 @@ export default function Home() {
 
   return (
     <main className="flex-1">
-      {(ctaState === 'modal' || ctaState === 'submitting') && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-zinc-950/70 backdrop-blur-md"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="audit-modal-title"
-        >
-          <SurfaceCard className="w-full max-w-md p-6 sm:p-7 shadow-2xl shadow-black/40 space-y-5">
-            <header className="space-y-1.5">
-              <h2 id="audit-modal-title" className="text-xl font-semibold text-white">
-                Free website audit
-              </h2>
-              <p className="text-sm text-zinc-400">
-                We scan your site and email you a report in about two minutes.
-              </p>
-            </header>
-
-            <form onSubmit={(e) => void handleAuditSubmit(e)} className="space-y-4" noValidate>
-              <label className="block space-y-1.5">
-                <span className="text-sm font-medium text-zinc-300">Email</span>
-                <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} placeholder="you@yourbusiness.com" />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-sm font-medium text-zinc-300">Website</span>
-                <input type="url" required autoComplete="url" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} className={inputClass} placeholder="yourbusiness.com" />
-              </label>
-              <label className="block space-y-1.5">
-                <span className="text-sm font-medium text-zinc-300">
-                  Business name <span className="text-zinc-500 font-normal">(optional)</span>
-                </span>
-                <input type="text" autoComplete="organization" value={businessName} onChange={(e) => setBusinessName(e.target.value)} className={inputClass} placeholder="Your Business Ltd" />
-              </label>
-
-              {formError && (
-                <p role="alert" className="text-sm text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
-                  {formError}
-                </p>
-              )}
-
-              <div className="flex gap-3 pt-1">
-                <button type="button" onClick={() => setCtaState('idle')} className="flex-1 min-h-11 rounded-xl border border-white/[0.08] text-zinc-300 hover:bg-white/[0.04] transition-colors">
-                  Cancel
-                </button>
-                <button type="submit" disabled={ctaState === 'submitting'} className="flex-1 min-h-11 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-60 text-white font-medium transition-colors">
-                  {ctaState === 'submitting' ? 'Starting…' : 'Start audit'}
-                </button>
-              </div>
-            </form>
-          </SurfaceCard>
-        </div>
-      )}
-
       <section className="hero-bg relative overflow-hidden border-b border-white/[0.06]">
         <HeroSprayBackground />
         <PageContainer narrow className="relative z-10 py-14 sm:py-20 text-center">
@@ -229,19 +178,7 @@ export default function Home() {
           </div>
 
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-            {ctaState === 'success' && auditRequestId ? (
-              <div role="status" aria-live="polite" className="max-w-md w-full">
-                <SurfaceCard className="px-6 py-5 text-left sm:text-center">
-                  <p className="text-teal-300 font-medium mb-1">Audit started</p>
-                  <p className="text-sm text-zinc-400">
-                    We&apos;ll email <span className="text-zinc-300">{email}</span> when ready.{' '}
-                    <Link href={`/audit/${auditRequestId}`} className="text-teal-400 hover:text-teal-300 underline underline-offset-2">
-                      View progress
-                    </Link>
-                  </p>
-                </SurfaceCard>
-              </div>
-            ) : (
+            {ctaState !== 'success' && (
               <>
                 <button
                   type="button"
@@ -273,6 +210,94 @@ export default function Home() {
               </li>
             ))}
           </ul>
+
+          <div id="audit-form" className="mt-12 sm:mt-14 text-left">
+            {ctaState === 'success' && auditRequestId ? (
+              <SurfaceCard className="max-w-lg mx-auto px-6 py-5 text-center" role="status" aria-live="polite">
+                <p className="text-teal-300 font-medium mb-1">Full audit started</p>
+                <p className="text-sm text-zinc-400 mb-4">
+                  We&apos;re running a full SEO + CRO scan of{' '}
+                  <span className="text-zinc-300">{normalizeWebsiteUrl(websiteUrl)}</span>. Report in ~2
+                  minutes at{' '}
+                  <span className="text-zinc-300">{email}</span>.
+                </p>
+                <Link
+                  href={`/audit/${auditRequestId}`}
+                  className="inline-flex min-h-11 items-center justify-center px-6 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-medium transition-colors"
+                >
+                  Open full audit report
+                </Link>
+              </SurfaceCard>
+            ) : (
+              <SurfaceCard className="max-w-lg mx-auto p-6 sm:p-7 shadow-xl shadow-black/20 space-y-5">
+                <header className="space-y-1.5 text-center sm:text-left">
+                  <h2 className="text-xl font-semibold text-white">Audit any website</h2>
+                  <p className="text-sm text-zinc-400">
+                    Paste your link — any domain. We run a full research audit: competitors, page
+                    speed, SEO findings, and a shareable report.
+                  </p>
+                </header>
+
+                <form onSubmit={(e) => void handleAuditSubmit(e)} className="space-y-4" noValidate>
+                  <label className="block space-y-1.5">
+                    <span className="text-sm font-medium text-zinc-300">Your website</span>
+                    <input
+                      id="audit-website"
+                      type="url"
+                      required
+                      autoComplete="url"
+                      value={websiteUrl}
+                      onChange={(e) => setWebsiteUrl(e.target.value)}
+                      className={inputClass}
+                      placeholder="https://yourbusiness.com"
+                    />
+                  </label>
+                  <label className="block space-y-1.5">
+                    <span className="text-sm font-medium text-zinc-300">Email</span>
+                    <input
+                      type="email"
+                      required
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className={inputClass}
+                      placeholder="you@yourbusiness.com"
+                    />
+                  </label>
+                  <label className="block space-y-1.5">
+                    <span className="text-sm font-medium text-zinc-300">
+                      Business name <span className="text-zinc-500 font-normal">(optional)</span>
+                    </span>
+                    <input
+                      type="text"
+                      autoComplete="organization"
+                      value={businessName}
+                      onChange={(e) => setBusinessName(e.target.value)}
+                      className={inputClass}
+                      placeholder="Your Business Ltd"
+                    />
+                  </label>
+
+                  {formError && (
+                    <p
+                      role="alert"
+                      className="text-sm text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2"
+                    >
+                      {formError}
+                    </p>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={ctaState === 'submitting'}
+                    className="w-full min-h-12 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-60 text-white font-medium transition-colors"
+                  >
+                    {ctaState === 'submitting' ? 'Starting full audit…' : 'Start full audit'}
+                  </button>
+                </form>
+              </SurfaceCard>
+            )}
+          </div>
         </PageContainer>
       </section>
     </main>
