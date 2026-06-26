@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { CardGridSkeleton, TableSkeleton } from '@/components/LoadingSkeleton';
+import { ResearchTierGuide } from '@/components/ResearchTierGuide';
 import { SeoBestPracticesPanel } from '@/components/SeoBestPracticesPanel';
 import { SocialPresencePanel } from '@/components/SocialPresencePanel';
 import { useToast } from '@/components/Toast';
@@ -52,7 +53,7 @@ function AuditStatusBadge({
   const label =
     status === 'completed'
       ? tier === 'light'
-        ? 'SERP scan'
+        ? 'Light research'
         : 'Full audit'
       : status === 'failed'
         ? 'Failed'
@@ -377,6 +378,18 @@ export default function LeadsPage() {
         ...prev,
         [lead.id]: { auditId: body.auditId as string, status: 'completed' },
       }));
+      setLeads((prev) =>
+        prev.map((l) =>
+          l.id === lead.id
+            ? {
+                ...l,
+                last_audit_id: body.auditId as string,
+                audit_status: 'completed',
+                audit_tier: 'full',
+              }
+            : l
+        )
+      );
       setAnalyzeState((prev) => ({ ...prev, [lead.id]: 'done' }));
       setSocialByLead((prev) => {
         const next = { ...prev };
@@ -442,6 +455,8 @@ export default function LeadsPage() {
               </Link>
             </header>
 
+            <ResearchTierGuide />
+
             <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {isLoading ? (
                 <CardGridSkeleton count={4} cols={4} />
@@ -468,14 +483,17 @@ export default function LeadsPage() {
             </section>
 
             <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={handleDiscover}
-                disabled={isDiscovering}
-                className="inline-flex min-h-10 items-center px-5 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-60 text-white text-sm font-medium transition-colors"
-              >
-                {isDiscovering ? 'Finding leads…' : 'Find leads'}
-              </button>
+              <div className="flex flex-col gap-1">
+                <button
+                  type="button"
+                  onClick={handleDiscover}
+                  disabled={isDiscovering}
+                  className="inline-flex min-h-10 items-center px-5 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-60 text-white text-sm font-medium transition-colors border border-sky-500/30"
+                >
+                  {isDiscovering ? 'Finding leads…' : 'Find leads — light research'}
+                </button>
+                <span className="text-xs text-sky-300/90">Auto SERP scan on each new lead</span>
+              </div>
               <button
                 type="button"
                 onClick={() => void handleBatchSend()}
@@ -658,38 +676,66 @@ export default function LeadsPage() {
                                     <span className="block text-xs text-zinc-500">—</span>
                                   )}
                                   {lead.website_url ? (
-                                    <div className="flex flex-col gap-1">
+                                    <div className="flex flex-col gap-1.5 min-w-[9rem]">
                                       {(lead.last_audit_id || leadAudits[lead.id]) &&
                                       (lead.audit_status === 'completed' ||
                                         leadAudits[lead.id]?.status === 'completed') ? (
-                                        <Link
-                                          href={`/research/${lead.last_audit_id ?? leadAudits[lead.id].auditId}`}
-                                          className="text-xs font-medium text-teal-400 hover:text-teal-300"
-                                        >
-                                          View audit
-                                        </Link>
-                                      ) : lead.audit_status === 'failed' || leadAudits[lead.id]?.status === 'failed' ? (
+                                        <>
+                                          <Link
+                                            href={`/research/${lead.last_audit_id ?? leadAudits[lead.id].auditId}`}
+                                            className={`text-xs font-medium hover:underline ${
+                                              lead.audit_tier === 'light'
+                                                ? 'text-sky-400 hover:text-sky-300'
+                                                : 'text-teal-400 hover:text-teal-300'
+                                            }`}
+                                          >
+                                            {lead.audit_tier === 'light'
+                                              ? 'View light research'
+                                              : 'View full report'}
+                                          </Link>
+                                          {lead.audit_tier === 'light' && (
+                                            <button
+                                              type="button"
+                                              onClick={() => handleAnalyze(lead)}
+                                              disabled={analyzeState[lead.id] === 'loading'}
+                                              className="inline-flex min-h-8 items-center justify-center px-2.5 rounded-lg bg-teal-600 hover:bg-teal-500 disabled:opacity-60 text-white text-xs font-medium transition-colors"
+                                            >
+                                              {analyzeState[lead.id] === 'loading'
+                                                ? 'Running full audit…'
+                                                : 'Run full audit →'}
+                                            </button>
+                                          )}
+                                        </>
+                                      ) : lead.audit_status === 'failed' ||
+                                        leadAudits[lead.id]?.status === 'failed' ? (
                                         <button
                                           type="button"
                                           onClick={() => handleAnalyze(lead)}
                                           disabled={analyzeState[lead.id] === 'loading'}
-                                          className="text-xs font-medium text-red-300 hover:text-red-200 disabled:opacity-60 text-left"
-                                        >
-                                          {analyzeState[lead.id] === 'loading' ? 'Retrying…' : 'Retry audit'}
-                                        </button>
-                                      ) : (
-                                        <button
-                                          type="button"
-                                          onClick={() => handleAnalyze(lead)}
-                                          disabled={analyzeState[lead.id] === 'loading'}
-                                          className="text-xs font-medium text-zinc-400 hover:text-zinc-300 disabled:opacity-60 text-left"
+                                          className="inline-flex min-h-8 items-center justify-center px-2.5 rounded-lg bg-teal-600/90 hover:bg-teal-500 disabled:opacity-60 text-white text-xs font-medium transition-colors"
                                         >
                                           {analyzeState[lead.id] === 'loading'
-                                            ? 'Running audit…'
-                                            : analyzeState[lead.id] === 'error'
-                                              ? 'Retry audit'
-                                              : 'Run audit'}
+                                            ? 'Retrying…'
+                                            : 'Retry full audit'}
                                         </button>
+                                      ) : analyzeState[lead.id] === 'loading' ? (
+                                        <span className="text-xs text-teal-300">Running full audit…</span>
+                                      ) : (
+                                        <>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleAnalyze(lead)}
+                                            disabled={analyzeState[lead.id] === 'loading'}
+                                            className="inline-flex min-h-8 items-center justify-center px-2.5 rounded-lg bg-teal-600 hover:bg-teal-500 disabled:opacity-60 text-white text-xs font-medium transition-colors"
+                                          >
+                                            Run full audit →
+                                          </button>
+                                          {!lead.last_audit_id && !leadAudits[lead.id] && (
+                                            <span className="text-[11px] text-zinc-500 leading-snug">
+                                              Or use Find leads for light research first
+                                            </span>
+                                          )}
+                                        </>
                                       )}
                                     </div>
                                   ) : (

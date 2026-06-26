@@ -1,9 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { LinkedRepositoriesPanel } from '@/components/LinkedRepositoriesPanel';
 import { ReportSkeleton } from '@/components/LoadingSkeleton';
+import { ResearchTierGuide } from '@/components/ResearchTierGuide';
 import { SocialPresencePanel } from '@/components/SocialPresencePanel';
 import { PageContainer, SurfaceCard } from '@/components/ui/PageContainer';
 import { isLightAuditTrace } from '@/lib/leads/is-light-audit';
@@ -25,10 +27,13 @@ function SeverityBadge({ severity }: { severity: string }) {
 }
 
 export default function ResearchAuditPage({ params }: { params: Promise<{ id: string }> }) {
+  const router = useRouter();
   const [auditId, setAuditId] = useState<string | null>(null);
   const [audit, setAudit] = useState<AuditDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
 
   useEffect(() => {
     void params.then((p) => setAuditId(p.id));
@@ -53,6 +58,32 @@ export default function ResearchAuditPage({ params }: { params: Promise<{ id: st
       }
     })();
   }, [auditId]);
+
+  const handleRunFullAudit = async () => {
+    if (!audit?.lead_id) return;
+
+    setUpgradeLoading(true);
+    setUpgradeError(null);
+
+    try {
+      const response = await fetch('/api/research/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId: audit.lead_id }),
+      });
+      const body = (await response.json()) as { auditId?: string; error?: string };
+
+      if (!response.ok || !body.auditId) {
+        throw new Error(body.error ?? 'Full audit failed');
+      }
+
+      router.push(`/research/${body.auditId}`);
+    } catch (err) {
+      setUpgradeError(err instanceof Error ? err.message : 'Full audit failed');
+    } finally {
+      setUpgradeLoading(false);
+    }
+  };
 
   const socialFindings = useMemo(
     () => audit?.findings.filter((f) => f.category === 'social') ?? [],
@@ -129,7 +160,12 @@ export default function ResearchAuditPage({ params }: { params: Promise<{ id: st
             <p className="text-sm text-teal-400 font-medium">Research report</p>
             {isLightScan && (
               <span className="inline-flex px-2 py-0.5 rounded-md border text-xs bg-sky-500/10 text-sky-300 border-sky-500/25">
-                Light SERP scan
+                Light research
+              </span>
+            )}
+            {!isLightScan && (
+              <span className="inline-flex px-2 py-0.5 rounded-md border text-xs bg-teal-500/10 text-teal-300 border-teal-500/25">
+                Full audit
               </span>
             )}
           </div>
@@ -156,6 +192,51 @@ export default function ResearchAuditPage({ params }: { params: Promise<{ id: st
             ← All audits
           </Link>
         </header>
+
+        {isLightScan && (
+          <SurfaceCard className="p-5 sm:p-6 space-y-4 border-teal-500/25 bg-teal-500/[0.04]">
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold text-teal-200">Want the detailed report?</h2>
+              <p className="text-sm text-zinc-300 leading-relaxed">
+                This page is a quick SERP scan only (rank, competitors, outreach hook). A{' '}
+                <strong className="font-medium text-white">full audit</strong> scrapes the site, checks social
+                profiles, PageSpeed, and saves actionable findings.
+              </p>
+            </div>
+            {audit.lead_id ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => void handleRunFullAudit()}
+                  disabled={upgradeLoading}
+                  className="inline-flex min-h-10 items-center px-5 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-60 text-white text-sm font-medium transition-colors"
+                >
+                  {upgradeLoading ? 'Running full audit…' : 'Run full audit →'}
+                </button>
+                <Link
+                  href="/leads"
+                  className="text-sm text-teal-400 hover:text-teal-300 font-medium"
+                >
+                  Back to leads
+                </Link>
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-400">
+                Link this business on the{' '}
+                <Link href="/leads" className="text-teal-400 hover:underline">
+                  Leads
+                </Link>{' '}
+                page, then click <strong className="font-medium text-zinc-300">Run full audit</strong>.
+              </p>
+            )}
+            {upgradeError && (
+              <p className="text-sm text-red-300" role="alert">
+                {upgradeError}
+              </p>
+            )}
+            <ResearchTierGuide compact />
+          </SurfaceCard>
+        )}
 
         {audit.auto_pr?.pr_url && (
           <SurfaceCard className="p-4 sm:p-5 border-teal-500/25 bg-teal-500/[0.04]">

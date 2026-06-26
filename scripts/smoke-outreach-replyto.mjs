@@ -30,7 +30,7 @@ loadEnvFile(resolve(root, '.env.local'));
 
 const apiKey = process.env.RESEND_API_KEY;
 const from = process.env.RESEND_FROM_EMAIL ?? 'SynapseCRO <onboarding@resend.dev>';
-const replyTo = process.env.RESEND_REPLY_TO_EMAIL?.trim() || 'ram+seo@acylic.dev';
+const replyTo = process.env.RESEND_REPLY_TO_EMAIL?.trim() || 'ram+seo@acyclic.dev';
 const to = process.argv[2] || replyTo;
 
 if (!apiKey) { console.error('RESEND_API_KEY not set'); process.exit(1); }

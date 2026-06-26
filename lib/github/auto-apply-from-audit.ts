@@ -3,6 +3,8 @@ import { applyFindingsToRepo } from '@/lib/github/apply-findings';
 import { isGitHubConfigured } from '@/lib/github/client';
 import { createPullRequestFromChanges } from '@/lib/github/create-pr';
 import type { AuditFindingInput, LinkedRepository } from '@/lib/github/types';
+import { flushLangfuseSpans } from '@/lib/langfuse/otel';
+import { traceAutoPrRun } from '@/lib/langfuse/trace-llm';
 import { notifySlack } from '@/lib/notifications/slack';
 import { fetchSeoPromptContext } from '@/lib/seo/prompt-context';
 
@@ -14,6 +16,7 @@ export interface AutoApplyResult {
   status: 'completed' | 'failed' | 'skipped';
   prUrl?: string;
   prNumber?: number;
+  filesChanged?: number;
   error?: string;
   reason?: string;
 }
@@ -159,6 +162,7 @@ async function executeRepoChangeRun(
       status: 'completed',
       prUrl,
       prNumber,
+      filesChanged: changes.length,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to create PR';
@@ -261,6 +265,22 @@ export async function autoApplyFromAudit(params: {
     );
     results.push(result);
 
+    await traceAutoPrRun({
+      auditId,
+      leadId,
+      changeRunId: result.changeRunId,
+      status: result.status,
+      githubOwner: repo.github_owner,
+      githubRepo: repo.github_repo,
+      prUrl: result.prUrl,
+      prNumber: result.prNumber,
+      filesChanged: result.filesChanged,
+      findingCount: findings.length,
+      error: result.error,
+      reason: result.reason,
+      source: 'auto',
+    });
+
     if (result.status === 'completed' && result.prUrl) {
       void notifySlack(
         [
@@ -285,6 +305,8 @@ export async function autoApplyFromAudit(params: {
       );
     }
   }
+
+  await flushLangfuseSpans();
 
   return results;
 }

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { ResearchTierGuide } from '@/components/ResearchTierGuide';
 import { TableSkeleton } from '@/components/LoadingSkeleton';
 import { useToast } from '@/components/Toast';
 import { PageContainer, SurfaceCard } from '@/components/ui/PageContainer';
@@ -40,7 +41,11 @@ export default function ResearchListPage() {
         <header className="space-y-2 border-b border-white/[0.06] pb-8">
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">Research audits</h1>
           <p className="text-zinc-400 max-w-2xl leading-relaxed">
-            Site audits with SEO findings, competitor rankings, and directory profile checks.
+            Light research (SERP rank + hooks) and full agent audits (scrape, social, PageSpeed). Run both from{' '}
+            <Link href="/leads" className="text-teal-400 hover:underline">
+              Leads
+            </Link>
+            .
           </p>
           <Link
             href="/leads"
@@ -49,6 +54,8 @@ export default function ResearchListPage() {
             ← Leads
           </Link>
         </header>
+
+        <ResearchTierGuide compact />
 
         {error && (
           <p className="p-4 rounded-xl bg-red-500/10 border border-red-500/25 text-red-300 text-sm">{error}</p>
@@ -88,7 +95,7 @@ export default function ResearchListPage() {
                         <td className="px-4 py-3">
                           {isLightAuditTrace(audit.tool_trace) ? (
                             <span className="inline-flex px-2 py-0.5 rounded-md text-xs bg-sky-500/10 text-sky-300 border border-sky-500/25">
-                              SERP scan
+                              Light research
                             </span>
                           ) : (
                             <span className="inline-flex px-2 py-0.5 rounded-md text-xs bg-teal-500/10 text-teal-300 border border-teal-500/25">

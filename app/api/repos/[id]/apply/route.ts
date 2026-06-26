@@ -5,6 +5,8 @@ import { isGitHubConfigured } from '@/lib/github/client';
 import { createPullRequestFromChanges } from '@/lib/github/create-pr';
 import type { AuditFindingInput, LinkedRepository } from '@/lib/github/types';
 import { fetchSeoPromptContext } from '@/lib/seo/prompt-context';
+import { flushLangfuseSpans } from '@/lib/langfuse/otel';
+import { traceAutoPrRun } from '@/lib/langfuse/trace-llm';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
@@ -183,6 +185,21 @@ export async function POST(
       })
       .eq('id', changeRunId);
 
+    await traceAutoPrRun({
+      auditId,
+      leadId: repo.lead_id,
+      changeRunId,
+      status: 'completed',
+      githubOwner: repo.github_owner,
+      githubRepo: repo.github_repo,
+      prUrl,
+      prNumber,
+      filesChanged: changes.length,
+      findingCount: findings.length,
+      source: 'manual',
+    });
+    await flushLangfuseSpans();
+
     return NextResponse.json({ prUrl, changeRunId, prNumber, branchName });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to create PR';
@@ -194,6 +211,19 @@ export async function POST(
         error_message: message,
       })
       .eq('id', changeRunId);
+
+    await traceAutoPrRun({
+      auditId,
+      leadId: repo.lead_id,
+      changeRunId,
+      status: 'failed',
+      githubOwner: repo.github_owner,
+      githubRepo: repo.github_repo,
+      findingCount: findings.length,
+      error: message,
+      source: 'manual',
+    });
+    await flushLangfuseSpans();
 
     return NextResponse.json({ error: message, changeRunId }, { status: 500 });
   }

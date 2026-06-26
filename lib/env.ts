@@ -77,7 +77,7 @@ export function getResendFromEmail(): string {
 
 /** Inbox that prospect replies land in. Sending is via a cold-send domain, but replies go here. */
 export function getResendReplyToEmail(): string {
-  return process.env.RESEND_REPLY_TO_EMAIL?.trim() || 'ram+seo@acylic.dev';
+  return process.env.RESEND_REPLY_TO_EMAIL?.trim() || 'ram+seo@acyclic.dev';
 }
 
 /** Fallback recipient when leads have no prospect email (demo / draft workflow). */

@@ -164,3 +164,95 @@ export async function traceResearchAudit(params: TraceResearchParams): Promise<v
     metadata,
   });
 }
+
+export interface TraceAutoPrParams {
+  auditId: string;
+  leadId?: string | null;
+  changeRunId?: string;
+  status: 'completed' | 'failed' | 'skipped';
+  githubOwner?: string;
+  githubRepo?: string;
+  prUrl?: string;
+  prNumber?: number;
+  filesChanged?: number;
+  findingCount?: number;
+  error?: string;
+  reason?: string;
+  source?: 'auto' | 'manual';
+}
+
+/** Motor execution — GitHub PR from audit findings (visible in Langfuse for end-to-end testing). */
+export async function traceAutoPrRun(params: TraceAutoPrParams): Promise<void> {
+  const repoLabel =
+    params.githubOwner && params.githubRepo
+      ? `${params.githubOwner}/${params.githubRepo}`
+      : null;
+  const filesChanged = params.filesChanged ?? 0;
+  const prCreated = params.status === 'completed' && Boolean(params.prUrl) ? 1 : 0;
+
+  const scores: Array<{ name: string; value: number; comment?: string }> = [
+    { name: 'pr_created', value: prCreated, comment: params.prUrl ?? params.error ?? params.reason },
+    { name: 'files_changed', value: filesChanged },
+    { name: 'auto_pr_success', value: params.status === 'completed' ? 1 : 0 },
+    { name: 'auto_pr_failed', value: params.status === 'failed' ? 1 : 0 },
+    { name: 'auto_pr_skipped', value: params.status === 'skipped' ? 1 : 0 },
+  ];
+
+  if (params.findingCount != null) {
+    scores.push({ name: 'finding_count', value: params.findingCount });
+  }
+  if (params.prNumber != null) {
+    scores.push({ name: 'pr_number', value: params.prNumber });
+  }
+
+  const metadata = {
+    auditId: params.auditId,
+    leadId: params.leadId ?? null,
+    changeRunId: params.changeRunId ?? null,
+    status: params.status,
+    repo: repoLabel,
+    prUrl: params.prUrl ?? null,
+    prNumber: params.prNumber ?? null,
+    source: params.source ?? 'auto',
+    error: params.error ?? null,
+    reason: params.reason ?? null,
+  };
+
+  const sessionId = researchSessionId({ leadId: params.leadId });
+
+  if (hasLangfuseConfig()) {
+    try {
+      const lf = getLangfuseClient()!;
+      const trace = lf.trace({
+        name: 'synapsecro.auto_pr',
+        sessionId,
+        userId: params.leadId ?? undefined,
+        tags: ['github', 'pr', 'motor', 'auto-apply'],
+        metadata,
+        ...(params.prUrl ? { output: params.prUrl } : {}),
+      });
+
+      for (const score of scores) {
+        trace.score({
+          name: score.name,
+          value: score.value,
+          comment: score.comment,
+        });
+      }
+
+      await flushLangfuse();
+    } catch (error) {
+      console.error('[langfuse] auto PR trace failed:', error);
+    }
+  }
+
+  await recordLlmEvalInClickHouse({
+    traceName: 'synapsecro.auto_pr',
+    observationName: params.source === 'manual' ? 'manual-apply' : 'auto-apply',
+    leadId: params.leadId ?? null,
+    auditId: params.auditId,
+    scores,
+    metadata,
+    outputPreview: params.prUrl ?? params.error ?? params.reason ?? params.status,
+  });
+}
