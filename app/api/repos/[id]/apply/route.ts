@@ -9,6 +9,21 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
 
+// TODO(scale): horizontal-scaling debt for this PR-ing endpoint.
+//   1. Shared GitHub PAT (getGitHubToken) — a single token's 5,000 req/hr REST
+//      quota is shared across ALL users/tenants. Move to per-user GitHub App
+//      installation tokens so quota scales per customer and we don't need their
+//      raw PAT. This is the multi-tenant blocker.
+//   2. Synchronous long request — applyFindingsToRepo runs an LLM call + many
+//      sequential GitHub API calls inside the HTTP request. Under load this hits
+//      serverless/Fly timeouts. Offload to a durable queue + worker and have the
+//      client poll repo_change_runs.status (the row already models async state).
+//   3. No idempotency/locking — two concurrent applies for the same
+//      (repository_id, audit_id) create duplicate branches/PRs. Add a unique
+//      constraint or advisory lock keyed on that pair before going multi-machine.
+//   4. Per-process state — cost tracker and any rate limiting must use a shared
+//      store (Supabase/Redis), not in-memory, before scaling past one Fly machine.
+
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
