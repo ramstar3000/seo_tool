@@ -134,6 +134,23 @@ export default function ResearchAuditPage({ params }: { params: Promise<{ id: st
           </Link>
         </header>
 
+        {audit.auto_pr?.pr_url && (
+          <SurfaceCard className="p-4 sm:p-5 border-teal-500/25 bg-teal-500/[0.04]">
+            <p className="text-sm text-teal-200">
+              Auto PR created
+              {audit.auto_pr.pr_number ? ` (#${audit.auto_pr.pr_number})` : ''}:{' '}
+              <a
+                href={audit.auto_pr.pr_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-teal-100 break-all"
+              >
+                {audit.auto_pr.pr_url}
+              </a>
+            </p>
+          </SurfaceCard>
+        )}
+
         {audit.summary && (
           <SurfaceCard className="p-5 sm:p-6 space-y-3">
             <h2 className="text-lg font-semibold text-white">Summary</h2>

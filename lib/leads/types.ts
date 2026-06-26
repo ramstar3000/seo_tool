@@ -17,6 +17,7 @@ export interface Lead {
   recommendation: string | null;
   last_audit_id: string | null;
   audit_status?: string | null;
+  auto_pr?: { pr_url: string; pr_number: number | null; audit_id: string } | null;
   created_at: string;
   updated_at: string;
 }
@@ -49,7 +50,7 @@ export interface DiscoveryRun {
 export interface DiscoverResult {
   leads: LeadInsert[];
   keywordsSearched: string[];
-  source: 'serpapi' | 'fallback';
+  source: 'tavily' | 'fallback';
   inserted: number;
   insertedLeadIds: string[];
 }

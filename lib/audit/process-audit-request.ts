@@ -1,5 +1,4 @@
-import { generateText } from 'ai';
-import { anthropic } from '@ai-sdk/anthropic';
+import { runLlmText } from '@/lib/llm/generate';
 import { runResearchAgent } from '@/lib/research/agent';
 import { convertAuditRequestToLead } from '@/lib/leads/convert-from-audit';
 import { inferKeywordFromWebsite } from '@/lib/leads/infer-keyword';
@@ -11,11 +10,11 @@ import {
   markAuditFailed,
   saveAuditToSupabase,
 } from '@/lib/research/persist';
-import { RESEARCH_AGENT_MODEL } from '@/lib/anthropic/client';
 import {
   buildVisitorAuditUserPrompt,
   VISITOR_AUDIT_SYSTEM_PROMPT,
 } from '@/lib/prompts/visitor-audit';
+import { autoApplyFromAudit } from '@/lib/github/auto-apply-from-audit';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 async function buildVisitorReportSummary(params: {
@@ -28,8 +27,7 @@ async function buildVisitorReportSummary(params: {
   const fallback = [params.summary, '', params.recommendations].filter(Boolean).join('\n\n');
 
   try {
-    const { text } = await generateText({
-      model: anthropic(RESEARCH_AGENT_MODEL),
+    const text = await runLlmText({
       system: VISITOR_AUDIT_SYSTEM_PROMPT,
       prompt: buildVisitorAuditUserPrompt({
         businessName: params.businessName,
@@ -41,7 +39,7 @@ async function buildVisitorReportSummary(params: {
       maxOutputTokens: 1024,
     });
 
-    return text.trim() || fallback;
+    return text || fallback;
   } catch {
     return fallback;
   }
@@ -120,6 +118,16 @@ export async function processAuditRequest(requestId: string): Promise<void> {
         report_summary: reportSummary,
       })
       .eq('id', requestId);
+
+    if (conversion?.leadId) {
+      void autoApplyFromAudit({
+        supabase,
+        auditId,
+        leadId: conversion.leadId,
+      }).catch((err) => {
+        console.error('[process-audit-request] auto-PR failed:', err);
+      });
+    }
 
     void notifySlack(
       [

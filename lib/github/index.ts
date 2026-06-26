@@ -5,6 +5,7 @@ export {
 } from '@/lib/github/client';
 export { parseRepoUrl } from '@/lib/github/parse-repo-url';
 export { applyFindingsToRepo } from '@/lib/github/apply-findings';
+export { autoApplyFromAudit } from '@/lib/github/auto-apply-from-audit';
 export { createPullRequestFromChanges } from '@/lib/github/create-pr';
 export {
   isBlockedPath,

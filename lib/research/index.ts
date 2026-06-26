@@ -36,6 +36,7 @@ export type {
   SocialPresenceResult,
   SocialProfileStatus,
 } from '@/lib/research/social-presence';
+export { createResearchAgentTools } from '@/lib/research/agent-tools';
 export {
   ANTHROPIC_TOOL_DEFINITIONS,
   MAX_AGENT_TURNS,

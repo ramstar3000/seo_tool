@@ -8,6 +8,7 @@ import { SocialPresencePanel } from '@/components/SocialPresencePanel';
 import { useToast } from '@/components/Toast';
 import { PageContainer, SurfaceCard } from '@/components/ui/PageContainer';
 import { getMatchingPractices } from '@/lib/seo/best-practices';
+import { buildOutreachEmail } from '@/lib/leads/outreach-email';
 import type { Lead, LeadStatus } from '@/lib/leads/types';
 import type { SocialPresenceSnapshot } from '@/lib/research/types';
 
@@ -209,6 +210,16 @@ export default function LeadsPage() {
       setSocialByLead((prev) => ({ ...prev, [leadId]: null }));
     } finally {
       setSocialLoadingId(null);
+    }
+  };
+
+  const handleCopyEmail = async (lead: Lead) => {
+    const email = buildOutreachEmail(lead);
+    try {
+      await navigator.clipboard.writeText(email.full);
+      showToast('Outreach email copied');
+    } catch {
+      showToast('Could not copy to clipboard');
     }
   };
 
@@ -447,6 +458,25 @@ export default function LeadsPage() {
                                   </select>
                                 </td>
                                 <td className="px-4 py-3 space-y-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => void handleCopyEmail(lead)}
+                                    className="block text-xs font-medium text-zinc-400 hover:text-zinc-300"
+                                  >
+                                    Copy email
+                                  </button>
+                                  {lead.auto_pr?.pr_url && (
+                                    <a
+                                      href={lead.auto_pr.pr_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="block text-xs font-medium text-teal-400 hover:text-teal-300"
+                                      title="Auto-created PR from audit"
+                                    >
+                                      Auto PR
+                                      {lead.auto_pr.pr_number ? ` #${lead.auto_pr.pr_number}` : ''}
+                                    </a>
+                                  )}
                                   {hasSuggestions || leadAudits[lead.id] ? (
                                     <button
                                       type="button"
@@ -574,7 +604,7 @@ export default function LeadsPage() {
             )}
 
             <p className="text-sm text-zinc-500">
-              Without a SerpAPI key, demo mode loads 30 seeded London businesses.
+              Without a Tavily key, demo mode loads 30 seeded London businesses.
             </p>
           </div>
 

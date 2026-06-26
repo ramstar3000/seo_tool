@@ -180,7 +180,7 @@ export async function executeTool(
       return {
         competitors: ctx.competitors,
         count: ctx.competitors.length,
-        note: ctx.competitors.length === 0 ? 'SerpAPI key may not be configured' : undefined,
+        note: ctx.competitors.length === 0 ? 'Tavily API key may not be configured' : undefined,
       };
     }
 
@@ -238,7 +238,7 @@ export async function executeTool(
       return {
         ads,
         count: ads.length,
-        note: ads.length === 0 ? 'No ads found or SerpAPI key not configured' : undefined,
+        note: ads.length === 0 ? 'Tavily does not expose paid search ads — check organic competitors instead' : undefined,
       };
     }
 
@@ -302,7 +302,7 @@ export async function executeTool(
         inconsistencies: result.inconsistencies,
         note: result.searched
           ? undefined
-          : 'SerpAPI key not configured — returning platform checklist with not_searched status',
+          : 'Tavily API key not configured — returning platform checklist with not_searched status',
         referencePlatforms: SOCIAL_REFERENCE_PLATFORM_SUMMARY,
       };
     }

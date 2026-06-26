@@ -1,8 +1,20 @@
+import * as cheerio from 'cheerio';
 import { getFirecrawlApiKey } from '@/lib/env';
 
 const FETCH_TIMEOUT_MS = 15_000;
 const USER_AGENT =
   'SynapseCRO-ResearchBot/1.0 (+https://synapsecro.local; site-audit)';
+
+const GATE_PAGE_MARKERS = [
+  'checking your browser',
+  'please enable javascript',
+  'enable javascript to continue',
+  'cf-browser-verification',
+  'just a moment',
+  'access denied',
+  'bot detection',
+  'complete the captcha',
+];
 
 export interface FetchPageResult {
   html: string;
@@ -12,6 +24,35 @@ export interface FetchPageResult {
 
 function sanitizeFetchError(message: string): string {
   return message.replace(/sk-[a-zA-Z0-9_-]+/g, '[REDACTED]').slice(0, 200);
+}
+
+function isInsufficientHtml(html: string): boolean {
+  const trimmed = html.trim();
+  if (trimmed.length < 500) {
+    return true;
+  }
+
+  const lower = trimmed.toLowerCase();
+  if (GATE_PAGE_MARKERS.some((marker) => lower.includes(marker))) {
+    return true;
+  }
+
+  const $ = cheerio.load(html);
+  const bodyText = $('body').text().replace(/\s+/g, ' ').trim();
+  if (bodyText.length < 50) {
+    return true;
+  }
+
+  const spaRoot = $('#root, #app, #__next, [data-reactroot]').first();
+  if (
+    spaRoot.length > 0 &&
+    spaRoot.text().replace(/\s+/g, ' ').trim().length < 30 &&
+    $('script').length >= 2
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 async function fetchWithCheerio(url: string): Promise<FetchPageResult> {
@@ -65,15 +106,39 @@ async function fetchWithFirecrawl(url: string, apiKey: string): Promise<FetchPag
 }
 
 export async function fetchPageContent(url: string): Promise<FetchPageResult> {
-  const firecrawlKey = getFirecrawlApiKey();
+  let cheerioError: Error | undefined;
+  let cheerioResult: FetchPageResult | undefined;
 
+  try {
+    cheerioResult = await fetchWithCheerio(url);
+    if (!isInsufficientHtml(cheerioResult.html)) {
+      return cheerioResult;
+    }
+  } catch (error) {
+    cheerioError = error instanceof Error ? error : new Error('Fetch failed');
+  }
+
+  const firecrawlKey = getFirecrawlApiKey();
   if (firecrawlKey) {
     try {
       return await fetchWithFirecrawl(url, firecrawlKey);
-    } catch {
-      // Fall back to direct fetch when Firecrawl fails
+    } catch (error) {
+      const firecrawlMessage =
+        error instanceof Error ? error.message : 'Firecrawl scrape failed';
+      if (cheerioError) {
+        throw new Error(
+          `${cheerioError.message}; Firecrawl fallback also failed: ${firecrawlMessage}`
+        );
+      }
+      throw new Error(
+        `Direct fetch returned insufficient content; Firecrawl fallback also failed: ${firecrawlMessage}`
+      );
     }
   }
 
-  return fetchWithCheerio(url);
+  if (cheerioError) {
+    throw cheerioError;
+  }
+
+  return cheerioResult!;
 }

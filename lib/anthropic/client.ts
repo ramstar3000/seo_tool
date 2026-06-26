@@ -3,10 +3,6 @@ import { getAnthropicApiKey } from '@/lib/env';
 
 let client: Anthropic | null = null;
 
-export function isAnthropicConfigured(): boolean {
-  return Boolean(getAnthropicApiKey());
-}
-
 export function getAnthropicClient(): Anthropic {
   const apiKey = getAnthropicApiKey();
   if (!apiKey) {
@@ -20,6 +16,6 @@ export function getAnthropicClient(): Anthropic {
   return client;
 }
 
-/** Override with ANTHROPIC_MODEL env var if Anthropic deprecates this id. */
+/** Anthropic model id when using Anthropic as the LLM fallback. */
 export const RESEARCH_AGENT_MODEL =
   process.env.ANTHROPIC_MODEL ?? 'claude-haiku-4-5';

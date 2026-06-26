@@ -14,8 +14,21 @@ export function getAnthropicApiKey(): string | undefined {
   return process.env.ANTHROPIC_API_KEY;
 }
 
+export function getGeminiApiKey(): string | undefined {
+  return process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+}
+
+export function getGeminiModel(): string {
+  return process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+}
+
+export function getTavilyApiKey(): string | undefined {
+  return process.env.TAVILY_API_KEY;
+}
+
+/** @deprecated Use getTavilyApiKey */
 export function getSerpApiKey(): string | undefined {
-  return process.env.SERPAPI_KEY;
+  return getTavilyApiKey();
 }
 
 export function getGooglePlacesApiKey(): string | undefined {
@@ -61,6 +74,14 @@ export function hasAnthropicConfig(): boolean {
   return Boolean(getAnthropicApiKey());
 }
 
-export function hasResendConfig(): boolean {
-  return Boolean(getResendApiKey());
+export function hasGeminiConfig(): boolean {
+  return Boolean(getGeminiApiKey());
+}
+
+export function hasLlmConfig(): boolean {
+  return hasGeminiConfig() || hasAnthropicConfig();
+}
+
+export function hasTavilyConfig(): boolean {
+  return Boolean(getTavilyApiKey());
 }

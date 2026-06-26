@@ -1,7 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { generateText } from 'ai';
-import { anthropic } from '@ai-sdk/anthropic';
-import { RESEARCH_AGENT_MODEL } from '@/lib/anthropic/client';
+import { runLlmText } from '@/lib/llm/generate';
 import { runResearchAgent } from '@/lib/research/agent';
 import {
   buildVisitorAuditUserPrompt,
@@ -82,8 +80,7 @@ async function generateVisitorSummary(
   topFindings: Array<{ severity: string; title: string; description: string }>
 ): Promise<string> {
   try {
-    const { text } = await generateText({
-      model: anthropic(RESEARCH_AGENT_MODEL),
+    const text = await runLlmText({
       system: VISITOR_AUDIT_SYSTEM_PROMPT,
       prompt: buildVisitorAuditUserPrompt({
         businessName,
@@ -92,8 +89,9 @@ async function generateVisitorSummary(
         recommendations,
         findings: topFindings.map((f) => ({ ...f, category: 'general' })),
       }),
+      maxOutputTokens: 1024,
     });
-    return text.trim();
+    return text;
   } catch {
     return [
       `Thanks for requesting a free audit for ${businessName}!`,

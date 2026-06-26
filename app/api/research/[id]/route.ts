@@ -38,7 +38,24 @@ export async function GET(
       return NextResponse.json({ error: 'Audit not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ audit });
+    const { data: prRun } = await supabase
+      .from('repo_change_runs')
+      .select('pr_url, pr_number, status')
+      .eq('audit_id', id)
+      .eq('status', 'completed')
+      .not('pr_url', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const autoPr = prRun?.pr_url
+      ? {
+          pr_url: prRun.pr_url as string,
+          pr_number: (prRun.pr_number as number | null) ?? null,
+        }
+      : null;
+
+    return NextResponse.json({ audit: { ...audit, auto_pr: autoPr } });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to load audit';
     return NextResponse.json({ error: message }, { status: 500 });

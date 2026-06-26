@@ -1,32 +1,23 @@
-import { getSerpApiKey } from '@/lib/env';
+import { getTavilyApiKey } from '@/lib/env';
 import type { SerpAd, SerpOrganicResult } from '@/lib/research/types';
 
-interface SerpApiOrganicResult {
-  position?: number;
+interface TavilyResult {
   title?: string;
-  link?: string;
-  snippet?: string;
+  url?: string;
+  content?: string;
+  score?: number;
 }
 
-interface SerpApiAdResult {
-  position?: number;
-  title?: string;
-  link?: string;
-  snippet?: string;
-}
-
-interface SerpApiResponse {
-  organic_results?: SerpApiOrganicResult[];
-  ads?: SerpApiAdResult[];
+interface TavilySearchResponse {
+  results?: TavilyResult[];
   error?: string;
 }
 
 export interface SerpSearchOptions {
   num?: number;
-  googleDomain?: string;
-  gl?: string;
-  hl?: string;
   location?: string;
+  /** Restrict results to these domains (Tavily include_domains). */
+  includeDomains?: string[];
 }
 
 function parseBusinessName(title: string): string {
@@ -37,82 +28,83 @@ function parseBusinessName(title: string): string {
   return title.trim();
 }
 
-async function fetchSerpApi(
-  keyword: string,
+function buildQuery(query: string, location?: string): string {
+  if (!location) return query;
+  const lower = query.toLowerCase();
+  if (lower.includes(location.toLowerCase())) return query;
+  return `${query} ${location}`;
+}
+
+async function fetchTavily(
+  query: string,
   options: SerpSearchOptions = {}
-): Promise<SerpApiResponse | null> {
-  const apiKey = getSerpApiKey();
+): Promise<TavilySearchResponse | null> {
+  const apiKey = getTavilyApiKey();
   if (!apiKey) return null;
 
-  const params = new URLSearchParams({
-    engine: 'google',
-    q: keyword,
-    google_domain: options.googleDomain ?? 'google.co.uk',
-    gl: options.gl ?? 'uk',
-    hl: options.hl ?? 'en',
-    num: String(options.num ?? 10),
-    api_key: apiKey,
-  });
+  const body: Record<string, unknown> = {
+    query: buildQuery(query, options.location),
+    max_results: Math.min(Math.max(options.num ?? 10, 1), 20),
+    search_depth: 'basic',
+  };
 
-  if (options.location) {
-    params.set('location', options.location);
+  if (options.includeDomains?.length) {
+    body.include_domains = options.includeDomains;
   }
 
-  const response = await fetch(`https://serpapi.com/search.json?${params.toString()}`);
-  if (!response.ok) return null;
+  try {
+    const response = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
 
-  const data = (await response.json()) as SerpApiResponse;
-  if (data.error) return null;
+    if (!response.ok) return null;
 
-  return data;
+    const data = (await response.json()) as TavilySearchResponse & { detail?: string };
+    if (data.error || data.detail) return null;
+
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function mapTavilyResults(data: TavilySearchResponse | null): SerpOrganicResult[] {
+  if (!data?.results) return [];
+
+  return data.results
+    .filter((r) => r.title && r.url)
+    .map((r, index) => ({
+      position: index + 1,
+      title: r.title as string,
+      link: r.url as string,
+      snippet: r.content ?? null,
+    }));
 }
 
 export async function findCompetitors(
   keyword: string,
   location = 'London'
 ): Promise<SerpOrganicResult[]> {
-  const data = await fetchSerpApi(keyword, { location, num: 10 });
-  if (!data?.organic_results) return [];
-
-  return data.organic_results
-    .filter((r) => r.position && r.title && r.link)
-    .map((r) => ({
-      position: r.position as number,
-      title: r.title as string,
-      link: r.link as string,
-      snippet: r.snippet ?? null,
-    }));
+  const data = await fetchTavily(keyword, { location, num: 10 });
+  return mapTavilyResults(data);
 }
 
 export async function searchGoogle(
   query: string,
   options: SerpSearchOptions = {}
 ): Promise<SerpOrganicResult[]> {
-  const data = await fetchSerpApi(query, { ...options, num: options.num ?? 5 });
-  if (!data?.organic_results) return [];
-
-  return data.organic_results
-    .filter((r) => r.title && r.link)
-    .map((r, index) => ({
-      position: r.position ?? index + 1,
-      title: r.title as string,
-      link: r.link as string,
-      snippet: r.snippet ?? null,
-    }));
+  const data = await fetchTavily(query, { ...options, num: options.num ?? 5 });
+  return mapTavilyResults(data);
 }
 
-export async function getSerpAds(keyword: string): Promise<SerpAd[]> {
-  const data = await fetchSerpApi(keyword, { num: 10 });
-  if (!data?.ads) return [];
-
-  return data.ads
-    .filter((ad) => ad.title && ad.link)
-    .map((ad, index) => ({
-      position: ad.position ?? index + 1,
-      title: ad.title as string,
-      link: ad.link as string,
-      snippet: ad.snippet ?? null,
-    }));
+/** Tavily does not expose paid search ads — returns empty; agent uses organic competitors instead. */
+export async function getSerpAds(_keyword: string): Promise<SerpAd[]> {
+  return [];
 }
 
 export async function fetchSerpLeadsForKeyword(
@@ -126,8 +118,8 @@ export async function fetchSerpLeadsForKeyword(
     title: string;
   }>
 > {
-  const data = await fetchSerpApi(keyword, { num: 10 });
-  if (!data?.organic_results) return [];
+  const data = await fetchTavily(keyword, { location: 'London', num: 10 });
+  const results = mapTavilyResults(data);
 
   const leads: Array<{
     business_name: string;
@@ -136,14 +128,12 @@ export async function fetchSerpLeadsForKeyword(
     title: string;
   }> = [];
 
-  for (const result of data.organic_results) {
-    const position = result.position;
-    if (!position || !positions.includes(position)) continue;
-    if (!result.title || !result.link) continue;
+  for (const result of results) {
+    if (!positions.includes(result.position)) continue;
 
     leads.push({
       business_name: parseBusinessName(result.title),
-      rank_position: position,
+      rank_position: result.position,
       website_url: result.link,
       title: result.title,
     });

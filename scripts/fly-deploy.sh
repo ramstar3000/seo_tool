@@ -25,7 +25,7 @@ if ! fly status -a "${APP}" >/dev/null 2>&1; then
 fi
 
 echo "==> Checking required secrets..."
-for name in SUPABASE_URL SUPABASE_PUBLISHABLE_KEY SUPABASE_SECRET_KEY ANTHROPIC_API_KEY; do
+for name in SUPABASE_URL SUPABASE_PUBLISHABLE_KEY SUPABASE_SECRET_KEY GEMINI_API_KEY ANTHROPIC_API_KEY; do
   if ! fly secrets list -a "${APP}" 2>/dev/null | grep -q "^${name}"; then
     echo "Missing secret: ${name}"
     echo "Run: fly secrets import < .env"

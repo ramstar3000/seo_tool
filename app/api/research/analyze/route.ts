@@ -8,6 +8,7 @@ import {
   markAuditFailed,
   saveAuditToSupabase,
 } from '@/lib/research/persist';
+import { autoApplyFromAudit } from '@/lib/github/auto-apply-from-audit';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
@@ -119,6 +120,16 @@ export async function POST(request: NextRequest) {
     await supabase.from('site_audits').delete().eq('id', auditId);
 
     const { auditId: savedId } = await saveAuditToSupabase(supabase, result);
+
+    if (leadId) {
+      void autoApplyFromAudit({
+        supabase,
+        auditId: savedId,
+        leadId,
+      }).catch((err) => {
+        console.error('[research/analyze] auto-PR failed:', err);
+      });
+    }
 
     return NextResponse.json({ auditId: savedId });
   } catch (error) {

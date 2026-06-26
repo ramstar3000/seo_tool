@@ -76,7 +76,7 @@ export function SocialPresencePanel({
         {!searched && (
           <>
             <span aria-hidden>·</span>
-            <span className="text-zinc-500">SerpAPI not used — checklist only</span>
+            <span className="text-zinc-500">Tavily not used — checklist only</span>
           </>
         )}
       </div>

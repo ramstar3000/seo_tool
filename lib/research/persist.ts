@@ -111,6 +111,7 @@ export interface AuditDetail extends SiteAudit {
   socialProfiles: Array<AuditSocialProfile & { id: string; platform_name?: string }>;
   socialPresence: SocialPresenceSnapshot | null;
   pageSpeed: ReturnType<typeof extractPageSpeedFromTrace>;
+  auto_pr?: { pr_url: string; pr_number: number | null } | null;
 }
 
 export async function getAuditById(

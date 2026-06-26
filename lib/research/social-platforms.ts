@@ -4,7 +4,7 @@ export interface SocialReferencePlatform {
   domain: string;
   /** Optional regex to validate profile URLs on this platform */
   profileUrlPattern?: RegExp;
-  /** site: operator target for SerpAPI discovery (defaults to domain) */
+  /** site: operator target for Tavily domain-filtered search (defaults to domain) */
   searchSite?: string;
   seoNotes: string;
 }

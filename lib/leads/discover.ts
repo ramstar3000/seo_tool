@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { getSerpApiKey } from '@/lib/env';
+import { getTavilyApiKey } from '@/lib/env';
 import { findKeywordTemplate, getLondonKeywordStrings, LONDON_KEYWORDS } from '@/lib/leads/keywords';
 import { LONDON_SEED_LEADS } from '@/lib/leads/london-seed-leads';
 import { scoreLead } from '@/lib/leads/scoring';
@@ -22,8 +22,8 @@ function enrichLead(lead: LeadInsert): LeadInsert {
   };
 }
 
-async function fetchSerpApiLeads(keyword: string): Promise<LeadInsert[]> {
-  const apiKey = getSerpApiKey();
+async function fetchTavilyLeads(keyword: string): Promise<LeadInsert[]> {
+  const apiKey = getTavilyApiKey();
   if (!apiKey) return [];
 
   const template = findKeywordTemplate(keyword);
@@ -41,13 +41,13 @@ async function fetchSerpApiLeads(keyword: string): Promise<LeadInsert[]> {
   );
 }
 
-async function discoverFromSerpApi(): Promise<LeadInsert[]> {
+async function discoverFromTavily(): Promise<LeadInsert[]> {
   const keywords = getLondonKeywordStrings();
   const allLeads: LeadInsert[] = [];
 
   for (const keyword of keywords) {
     try {
-      const leads = await fetchSerpApiLeads(keyword);
+      const leads = await fetchTavilyLeads(keyword);
       allLeads.push(...leads);
     } catch {
       // Skip failed keyword searches without crashing discovery
@@ -97,15 +97,15 @@ export async function discoverLondonLeads(
   supabase: SupabaseClient | null
 ): Promise<DiscoverResult> {
   const keywordsSearched = getLondonKeywordStrings();
-  const serpApiKey = getSerpApiKey();
+  const tavilyKey = getTavilyApiKey();
   let leads: LeadInsert[];
-  let source: 'serpapi' | 'fallback';
+  let source: 'tavily' | 'fallback';
 
-  if (serpApiKey) {
-    const serpLeads = await discoverFromSerpApi();
-    if (serpLeads.length > 0) {
-      leads = serpLeads;
-      source = 'serpapi';
+  if (tavilyKey) {
+    const tavilyLeads = await discoverFromTavily();
+    if (tavilyLeads.length > 0) {
+      leads = tavilyLeads;
+      source = 'tavily';
     } else {
       leads = discoverFromFallback();
       source = 'fallback';

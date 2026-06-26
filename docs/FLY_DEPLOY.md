@@ -43,12 +43,13 @@ fly secrets set CRON_SECRET="$(openssl rand -hex 32)"
 | `SUPABASE_URL` | Database + auth (also used as build secret) |
 | `SUPABASE_PUBLISHABLE_KEY` | Client auth (also build secret) |
 | `SUPABASE_SECRET_KEY` | Server-side writes |
-| `ANTHROPIC_API_KEY` | Research agent + CRO optimize |
+| `GEMINI_API_KEY` | Research agent + CRO optimize (primary) |
+| `ANTHROPIC_API_KEY` | Fallback LLM if Gemini is not set |
 | `CRON_SECRET` | Scheduled job auth on Fly |
 | `RESEND_API_KEY` | Audit completion emails |
 | `RESEND_FROM_EMAIL` | e.g. `SynapseCRO <hello@graphcoder.ai>` |
 
-**Optional:** `SERPAPI_KEY`, `FIRECRAWL_API_KEY`, `GITHUB_TOKEN`, `GOOGLE_PAGESPEED_API_KEY`, `SLACK_WEBHOOK_URL`
+**Optional:** `TAVILY_API_KEY`, `FIRECRAWL_API_KEY`, `GITHUB_TOKEN`, `GOOGLE_PAGESPEED_API_KEY`, `SLACK_WEBHOOK_URL`
 
 **App URL:** Fly sets `FLY_APP_NAME` automatically. Audit emails use `https://{app}.fly.dev` unless you set `NEXT_PUBLIC_APP_URL`.
 

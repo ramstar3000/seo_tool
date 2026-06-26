@@ -1,4 +1,4 @@
-import { getAnthropicClient, RESEARCH_AGENT_MODEL } from '@/lib/anthropic/client';
+import { runLlmText } from '@/lib/llm/generate';
 
 export interface OptimizeDecision {
   thought_process: string;
@@ -9,16 +9,6 @@ export interface OptimizeDecision {
     cta_text?: string;
     [key: string]: string | undefined;
   };
-}
-
-const SECRET_PATTERNS = [/sk-[a-zA-Z0-9_-]+/g, /sk-ant-[a-zA-Z0-9_-]+/g];
-
-function sanitizeErrorMessage(message: string): string {
-  let sanitized = message;
-  for (const pattern of SECRET_PATTERNS) {
-    sanitized = sanitized.replace(pattern, '[REDACTED]');
-  }
-  return sanitized;
 }
 
 function parseOptimizeDecision(raw: unknown): OptimizeDecision {
@@ -56,33 +46,12 @@ function extractJsonContent(content: string): unknown {
   }
 }
 
-async function runAnthropicOptimization(prompt: string): Promise<OptimizeDecision> {
-  const client = getAnthropicClient();
-
-  try {
-    const response = await client.messages.create({
-      model: RESEARCH_AGENT_MODEL,
-      max_tokens: 1024,
-      system: 'Respond with valid JSON only. Do not include markdown fences or extra commentary.',
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const textBlock = response.content.find((block) => block.type === 'text');
-    const content = textBlock?.type === 'text' ? textBlock.text : undefined;
-
-    if (typeof content !== 'string') {
-      throw new Error('Invalid optimization response');
-    }
-
-    return parseOptimizeDecision(extractJsonContent(content));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Anthropic request failed';
-    throw new Error(sanitizeErrorMessage(message));
-  }
-}
-
 export async function runOptimizationLLM(prompt: string): Promise<OptimizeDecision> {
-  return runAnthropicOptimization(prompt);
-}
+  const content = await runLlmText({
+    system: 'Respond with valid JSON only. Do not include markdown fences or extra commentary.',
+    prompt,
+    maxOutputTokens: 1024,
+  });
 
-export { RESEARCH_AGENT_MODEL as ANTHROPIC_MODEL };
+  return parseOptimizeDecision(extractJsonContent(content));
+}

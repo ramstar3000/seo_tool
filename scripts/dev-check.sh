@@ -22,10 +22,11 @@ Required for core app (database + auth):
   SUPABASE_SERVICE_ROLE_KEY      Service role key for server-side writes (or SUPABASE_SECRET_KEY)
 
 Required for full agent features:
-  ANTHROPIC_API_KEY              Claude API key for research agent, CRO optimize, and GitHub PR edits
+  GEMINI_API_KEY                 Primary LLM (Gemini / DeepMind) for agent, CRO, PR edits
+  ANTHROPIC_API_KEY              Fallback LLM if Gemini is not configured
 
 Optional — enhanced discovery & scraping:
-  SERPAPI_KEY                    Live Google SERP for lead discovery and competitor research
+  TAVILY_API_KEY                   Tavily web search for lead discovery and competitor research
   FIRECRAWL_API_KEY              JS-rendered page scraping fallback in research audits
 
 Optional — GitHub PR automation:

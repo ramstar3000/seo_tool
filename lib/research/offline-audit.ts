@@ -162,7 +162,7 @@ function buildSummary(
   const warning = findings.filter((f) => f.severity === 'warning').length;
 
   const modeNote = offline
-    ? ' (offline heuristic audit — configure ANTHROPIC_API_KEY for full agent analysis)'
+    ? ' (offline heuristic audit — configure GEMINI_API_KEY or ANTHROPIC_API_KEY for full agent analysis)'
     : '';
 
   return [
@@ -184,7 +184,7 @@ function buildRecommendations(findings: AuditFinding[]): string {
     .map((f, i) => `${i + 1}. ${f.title}: ${f.description}`);
 
   if (priority.length === 0) {
-    return 'No major issues detected by heuristic checks. Run a full agent audit with ANTHROPIC_API_KEY for deeper competitive and messaging analysis.';
+    return 'No major issues detected by heuristic checks. Run a full agent audit with GEMINI_API_KEY (or ANTHROPIC_API_KEY) for deeper competitive and messaging analysis.';
   }
 
   return priority.join('\n');
@@ -227,8 +227,9 @@ export async function runOfflineResearchAudit(
         keyword,
         business_name: businessName,
         status: 'completed',
-        summary: `Could not fetch ${targetUrl}: ${message}. Configure FIRECRAWL_API_KEY for JS-rendered sites.`,
-        recommendations: 'Verify the URL is reachable and retry. Add FIRECRAWL_API_KEY if the site requires JavaScript rendering.',
+        summary: `Could not fetch ${targetUrl}: ${message}. Set FIRECRAWL_API_KEY for a JS-rendering fallback on SPA sites.`,
+        recommendations:
+          'Verify the URL is reachable and retry. If the site is JS-rendered, configure FIRECRAWL_API_KEY so Firecrawl can be used as a fallback after direct fetch.',
         tool_trace: toolTrace,
         completed_at: now,
       },
@@ -289,7 +290,7 @@ export async function runOfflineResearchAudit(
     output: {
       searched: socialResult.searched,
       profileCount: socialProfiles.length,
-      note: socialResult.searched ? undefined : 'SerpAPI key not configured',
+      note: socialResult.searched ? undefined : 'Tavily API key not configured',
     },
     durationMs: Date.now() - socialStart,
   });

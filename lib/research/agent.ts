@@ -1,7 +1,7 @@
-import type Anthropic from '@anthropic-ai/sdk';
-import { generateObject } from 'ai';
-import { anthropic } from '@ai-sdk/anthropic';
-import { getAnthropicClient, isAnthropicConfigured, RESEARCH_AGENT_MODEL } from '@/lib/anthropic/client';
+import { generateText } from 'ai';
+import { getResearchModel, isResearchLlmConfigured } from '@/lib/llm/client';
+import { runLlmObject } from '@/lib/llm/generate';
+import { createResearchAgentTools } from '@/lib/research/agent-tools';
 import { runOfflineResearchAudit } from '@/lib/research/offline-audit';
 import {
   buildFindingsSynthesisUserPrompt,
@@ -12,12 +12,7 @@ import {
   RESEARCH_AGENT_SYSTEM_PROMPT,
 } from '@/lib/prompts/research-agent';
 import { auditReportSchema } from '@/lib/research/schemas';
-import {
-  ANTHROPIC_TOOL_DEFINITIONS,
-  MAX_AGENT_TURNS,
-  MAX_PAGE_SCRAPES,
-  runToolWithTrace,
-} from '@/lib/research/tools';
+import { MAX_AGENT_TURNS, MAX_PAGE_SCRAPES } from '@/lib/research/tools';
 import type {
   AuditPage,
   ResearchAgentResult,
@@ -48,8 +43,7 @@ function buildPagesFromContext(ctx: ToolContext, targetUrl: string): AuditPage[]
 async function synthesizeFinalReport(ctx: ToolContext): Promise<{ summary: string; recommendations: string }> {
   if (ctx.summary && ctx.recommendations) {
     try {
-      const { object } = await generateObject({
-        model: anthropic(RESEARCH_AGENT_MODEL),
+      const object = await runLlmObject({
         schema: auditReportSchema,
         system: FINDINGS_SYNTHESIS_SYSTEM_PROMPT,
         prompt: buildFindingsSynthesisUserPrompt({
@@ -75,12 +69,11 @@ async function synthesizeFinalReport(ctx: ToolContext): Promise<{ summary: strin
 }
 
 export async function runResearchAgent(params: RunResearchAgentParams): Promise<ResearchAgentResult> {
-  if (!isAnthropicConfigured()) {
+  if (!isResearchLlmConfigured()) {
     return runOfflineResearchAudit(params);
   }
 
   const { targetUrl, keyword, businessName, location = 'London', leadId } = params;
-  const client = getAnthropicClient();
 
   const ctx: ToolContext = {
     targetUrl,
@@ -102,61 +95,21 @@ export async function runResearchAgent(params: RunResearchAgentParams): Promise<
   };
 
   const toolTrace: ToolTraceEntry[] = [];
-  const messages: Anthropic.MessageParam[] = [
-    {
-      role: 'user',
-      content: buildResearchAgentUserTask({ targetUrl, keyword, businessName, location }),
+  let currentTurn = 1;
+
+  await generateText({
+    model: getResearchModel(),
+    system: RESEARCH_AGENT_SYSTEM_PROMPT,
+    prompt: buildResearchAgentUserTask({ targetUrl, keyword, businessName, location }),
+    tools: createResearchAgentTools(ctx, toolTrace, () => currentTurn),
+    stopWhen: ({ steps }) => steps.length >= MAX_AGENT_TURNS || ctx.finalized,
+    onStepStart: ({ stepNumber }) => {
+      currentTurn = stepNumber;
     },
-  ];
-
-  for (let turn = 1; turn <= MAX_AGENT_TURNS; turn++) {
-    const response = await client.messages.create({
-      model: RESEARCH_AGENT_MODEL,
-      max_tokens: 4096,
-      system: RESEARCH_AGENT_SYSTEM_PROMPT,
-      tools: ANTHROPIC_TOOL_DEFINITIONS,
-      messages,
-    });
-
-    messages.push({ role: 'assistant', content: response.content });
-
-    const toolUses = response.content.filter(
-      (block): block is Anthropic.ToolUseBlock => block.type === 'tool_use'
-    );
-
-    if (toolUses.length === 0) {
-      if (response.stop_reason === 'end_turn' && !ctx.finalized) {
-        // Nudge agent to finalize if it stopped without calling finalize_audit
-        messages.push({
-          role: 'user',
-          content: 'Please call finalize_audit with your summary and recommendations to complete the audit.',
-        });
-        continue;
-      }
-      break;
-    }
-
-    const toolResults: Anthropic.ToolResultBlockParam[] = [];
-
-    for (const toolUse of toolUses) {
-      const { result, trace } = await runToolWithTrace(turn, toolUse.name, toolUse.input, ctx);
-      toolTrace.push(trace);
-
-      toolResults.push({
-        type: 'tool_result',
-        tool_use_id: toolUse.id,
-        content: JSON.stringify(result),
-      });
-    }
-
-    messages.push({ role: 'user', content: toolResults });
-
-    if (ctx.finalized) break;
-  }
+  });
 
   const report = await synthesizeFinalReport(ctx);
   const now = new Date().toISOString();
-
   return {
     audit: {
       lead_id: leadId ?? null,

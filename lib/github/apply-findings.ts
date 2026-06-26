@@ -1,4 +1,4 @@
-import { getAnthropicClient, RESEARCH_AGENT_MODEL } from '@/lib/anthropic/client';
+import { runLlmText } from '@/lib/llm/generate';
 import { githubFetch } from '@/lib/github/client';
 import {
   filterSafeFileChanges,
@@ -113,30 +113,18 @@ export async function applyFindingsToRepo(params: {
     throw new Error('Could not read candidate file contents from repository');
   }
 
-  const client = getAnthropicClient();
-  const response = await client.messages.create({
-    model: RESEARCH_AGENT_MODEL,
-    max_tokens: 8192,
+  const textBlock = await runLlmText({
     system: GITHUB_CHANGES_SYSTEM_PROMPT,
-    messages: [
-      {
-        role: 'user',
-        content: buildGitHubChangesUserPrompt({
-          businessName,
-          keyword,
-          findings,
-          files: fileContents,
-        }),
-      },
-    ],
+    prompt: buildGitHubChangesUserPrompt({
+      businessName,
+      keyword,
+      findings,
+      files: fileContents,
+    }),
+    maxOutputTokens: 8192,
   });
 
-  const textBlock = response.content.find((block) => block.type === 'text');
-  if (!textBlock || textBlock.type !== 'text') {
-    throw new Error('No text response from model');
-  }
-
-  const rawChanges = parseChangesJson(textBlock.text);
+  const rawChanges = parseChangesJson(textBlock);
   const allowedPaths = new Set(fileContents.map((f) => f.path));
   const safeChanges = filterSafeFileChanges(
     rawChanges.filter((c) => allowedPaths.has(c.path))

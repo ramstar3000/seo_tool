@@ -9,7 +9,7 @@ When interpreting social presence results:
 - Missing profiles on major platforms (GBP, Facebook, LinkedIn, Yelp) are warning-level for local businesses.
 - Found profiles with mismatched business names, taglines, or phone numbers vs the website are messaging issues — save with category "social".
 - A complete GBP + Yelp + Facebook trio with aligned NAP is a positive competitive signal.
-- "not_searched" status means SerpAPI was unavailable — do not penalize; note as info.
+- "not_searched" status means Tavily was unavailable — do not penalize; note as info.
 - Compare website title/H1/meta against social bios and flag drift in value proposition or CTA language.
 - Prioritize actionable fixes: claim missing listings, align bios, standardize phone and business name spelling.
 

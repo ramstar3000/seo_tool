@@ -1,12 +1,11 @@
-import { generateObject } from 'ai';
-import { anthropic } from '@ai-sdk/anthropic';
+import { isResearchLlmConfigured } from '@/lib/llm/client';
+import { runLlmObject } from '@/lib/llm/generate';
 import {
   buildMessagingAnalysisUserPrompt,
   MESSAGING_ANALYSIS_SYSTEM_PROMPT,
 } from '@/lib/prompts/messaging-analysis';
 import { messagingAnalysisSchema } from '@/lib/research/schemas';
 import type { MessagingInconsistency, SeoSignals } from '@/lib/research/types';
-import { RESEARCH_AGENT_MODEL } from '@/lib/anthropic/client';
 
 function normalize(text: string | null | undefined): string {
   return (text ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
@@ -78,13 +77,12 @@ export async function comparePageMessaging(pages: SeoSignals[]): Promise<Messagi
 
   const heuristic = detectHeuristicInconsistencies(pages);
 
-  if (pages.length < 2) {
+  if (pages.length < 2 || !isResearchLlmConfigured()) {
     return heuristic;
   }
 
   try {
-    const { object } = await generateObject({
-      model: anthropic(RESEARCH_AGENT_MODEL),
+    const object = await runLlmObject({
       schema: messagingAnalysisSchema,
       system: MESSAGING_ANALYSIS_SYSTEM_PROMPT,
       prompt: buildMessagingAnalysisUserPrompt(

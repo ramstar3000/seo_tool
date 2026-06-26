@@ -7,8 +7,9 @@
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Client anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Server-side writes |
-| `ANTHROPIC_API_KEY` | For full agent | Offline heuristics work without |
-| `SERPAPI_KEY` | Optional | Live SERP / competitor research |
+| `GEMINI_API_KEY` | For full agent | Primary LLM — Gemini (DeepMind sponsor) |
+| `ANTHROPIC_API_KEY` | Fallback | Used when Gemini key is absent |
+| `TAVILY_API_KEY` | Optional | Live web search / competitor research (Tavily) |
 | `FIRECRAWL_API_KEY` | Optional | JS-rendered page scraping |
 | `GITHUB_TOKEN` | Optional | GitHub PR automation |
 | `CRON_SECRET` | Optional | Manual cron trigger auth |

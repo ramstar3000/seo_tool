@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { hasAnthropicConfig, hasSupabaseConfig } from '@/lib/env';
+import { getActiveLlmProvider, getActiveModelId, isResearchLlmConfigured } from '@/lib/llm/client';
+import { hasSupabaseConfig, hasTavilyConfig } from '@/lib/env';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { checkSupabaseSchema } from '@/lib/supabase/schema-health';
 
@@ -7,7 +8,8 @@ export const runtime = 'nodejs';
 
 export async function GET() {
   const supabaseConfigured = hasSupabaseConfig();
-  const anthropicConfigured = hasAnthropicConfig();
+  const llmConfigured = isResearchLlmConfigured();
+  const llmProvider = getActiveLlmProvider();
 
   let schemaOk: boolean | null = null;
   let missingTables: string[] = [];
@@ -26,8 +28,13 @@ export async function GET() {
     service: 'synapsecro',
     config: {
       supabase: supabaseConfigured,
-      anthropic: anthropicConfigured,
+      llm: llmConfigured,
+      llmProvider,
+      llmModel: llmConfigured ? getActiveModelId() : null,
+      tavily: hasTavilyConfig(),
       schema: schemaOk,
+      /** @deprecated use config.llm */
+      anthropic: llmConfigured,
     },
     ...(missingTables.length > 0
       ? { schemaHint: 'Run supabase/schema.sql in the Supabase SQL Editor', missingTables }

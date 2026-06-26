@@ -7,7 +7,7 @@ import {
 } from '@/lib/research/social-platforms';
 import { fetchPageContent } from '@/lib/research/fetch-page';
 import { searchGoogle } from '@/lib/research/serp';
-import { getSerpApiKey } from '@/lib/env';
+import { getTavilyApiKey } from '@/lib/env';
 import type { SeoSignals, SocialMessagingIssue, SocialSeoSignals } from '@/lib/research/types';
 
 export type SocialProfileStatus = 'found' | 'missing' | 'not_searched' | 'error';
@@ -54,7 +54,7 @@ function pickBestResult(
   return results[0] ?? null;
 }
 
-async function discoverViaSerp(
+async function discoverViaSearch(
   businessName: string,
   location: string
 ): Promise<Map<string, { url: string; title: string }>> {
@@ -62,10 +62,14 @@ async function discoverViaSerp(
 
   for (const platform of SOCIAL_REFERENCE_PLATFORMS) {
     const site = platform.searchSite ?? platform.domain;
-    const query = `site:${site} "${businessName}" ${location}`;
+    const domain = site.replace(/^site:/, '');
 
     try {
-      const results = await searchGoogle(query, { location, num: 3 });
+      const results = await searchGoogle(`"${businessName}"`, {
+        location,
+        num: 3,
+        includeDomains: [domain],
+      });
       const best = pickBestResult(results, platform.id);
       if (best) {
         found.set(platform.id, { url: best.link, title: best.title });
@@ -269,8 +273,8 @@ export async function discoverSocialProfiles(
   location: string,
   websiteUrl?: string
 ): Promise<SocialPresenceResult> {
-  const hasSerp = Boolean(getSerpApiKey());
-  const serpResults = hasSerp ? await discoverViaSerp(businessName, location) : new Map();
+  const hasSearch = Boolean(getTavilyApiKey());
+  const searchResults = hasSearch ? await discoverViaSearch(businessName, location) : new Map();
 
   const websiteLinks = new Map<string, string>();
   if (websiteUrl) {
@@ -291,10 +295,10 @@ export async function discoverSocialProfiles(
 
   for (const platform of SOCIAL_REFERENCE_PLATFORMS) {
     const searchUrl = buildProfileSearchUrl(platform.id, businessName, location);
-    const serpHit = serpResults.get(platform.id);
+    const searchHit = searchResults.get(platform.id);
     const websiteHit = websiteLinks.get(platform.id);
 
-    let status: SocialProfileStatus = hasSerp ? 'missing' : 'not_searched';
+    let status: SocialProfileStatus = hasSearch ? 'missing' : 'not_searched';
     let profileUrl: string | null = null;
     let foundVia: 'serp' | 'website_link' | null = null;
 
@@ -302,8 +306,8 @@ export async function discoverSocialProfiles(
       profileUrl = websiteHit;
       status = 'found';
       foundVia = 'website_link';
-    } else if (serpHit) {
-      profileUrl = serpHit.url;
+    } else if (searchHit) {
+      profileUrl = searchHit.url;
       status = 'found';
       foundVia = 'serp';
     }
@@ -337,7 +341,7 @@ export async function discoverSocialProfiles(
 
   return {
     profiles,
-    searched: hasSerp,
+    searched: hasSearch,
     inconsistencies: [],
   };
 }
