@@ -61,6 +61,11 @@ Optional — ClickHouse (see docs/CLICKHOUSE.md):
   CLICKHOUSE_DATABASE            Database name (default: default)
   Enables: conversion funnel, SEO insight memory, prompt context for GitHub PRs
 
+Optional — Langfuse LLM tracing + eval scores (see docs/CLICKHOUSE.md):
+  LANGFUSE_PUBLIC_KEY            Langfuse project public key
+  LANGFUSE_SECRET_KEY            Langfuse project secret key
+  LANGFUSE_BASE_URL              Optional (default: https://cloud.langfuse.com)
+
 Local dev (no cloud creds):
   npm run clickhouse:up      Start ClickHouse in Docker (http://localhost:8123)
   npm run clickhouse:smoke   Init tables + insert/query smoke test (no Next.js)

@@ -6,6 +6,8 @@ import { CardGridSkeleton, TableSkeleton } from '@/components/LoadingSkeleton';
 import { SeoBestPracticesPanel } from '@/components/SeoBestPracticesPanel';
 import { SocialPresencePanel } from '@/components/SocialPresencePanel';
 import { useToast } from '@/components/Toast';
+import { useAuth } from '@/components/AuthProvider';
+import { isAdminEmail } from '@/lib/auth/admin-email';
 import { PageContainer, SurfaceCard } from '@/components/ui/PageContainer';
 import { getMatchingPractices } from '@/lib/seo/best-practices';
 import { buildOutreachEmail } from '@/lib/leads/outreach-email';
@@ -27,10 +29,20 @@ interface SendState {
 const selectClass =
   'min-h-10 px-3 rounded-xl bg-zinc-950/80 border border-white/[0.08] text-sm text-zinc-200 focus:border-teal-500/40 focus:outline-none focus:ring-2 focus:ring-teal-500/20';
 
-function AuditStatusBadge({ status, auditId }: { status: string; auditId?: string | null }) {
+function AuditStatusBadge({
+  status,
+  auditId,
+  tier,
+}: {
+  status: string;
+  auditId?: string | null;
+  tier?: 'light' | 'full' | null;
+}) {
   const styles =
     status === 'completed'
-      ? 'bg-teal-500/10 text-teal-300 border-teal-500/25'
+      ? tier === 'light'
+        ? 'bg-sky-500/10 text-sky-300 border-sky-500/25'
+        : 'bg-teal-500/10 text-teal-300 border-teal-500/25'
       : status === 'running' || status === 'pending'
         ? 'bg-teal-500/10 text-teal-300 border-teal-500/25'
         : status === 'failed'
@@ -39,7 +51,9 @@ function AuditStatusBadge({ status, auditId }: { status: string; auditId?: strin
 
   const label =
     status === 'completed'
-      ? 'Audited'
+      ? tier === 'light'
+        ? 'SERP scan'
+        : 'Full audit'
       : status === 'failed'
         ? 'Failed'
         : status === 'running' || status === 'pending'
@@ -105,6 +119,8 @@ async function requestLeads(
 
 export default function LeadsPage() {
   const { showToast } = useToast();
+  const { user, isLoading: authLoading } = useAuth();
+  const admin = isAdminEmail(user?.email);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDiscovering, setIsDiscovering] = useState(false);
@@ -120,6 +136,7 @@ export default function LeadsPage() {
   const [leadAudits, setLeadAudits] = useState<LeadAuditMap>({});
 
   useEffect(() => {
+    if (authLoading || !admin) return;
     let cancelled = false;
 
     void (async () => {
@@ -153,7 +170,7 @@ export default function LeadsPage() {
     return () => {
       cancelled = true;
     };
-  }, [rankFilter, categoryFilter, showToast]);
+  }, [rankFilter, categoryFilter, showToast, admin, authLoading]);
 
   const categories = useMemo(() => {
     const set = new Set(leads.map((l) => l.category).filter(Boolean) as string[]);
@@ -379,6 +396,33 @@ export default function LeadsPage() {
     }
   };
 
+  if (authLoading) {
+    return (
+      <main className="flex-1">
+        <PageContainer className="py-14">
+          <p className="text-zinc-500">Loading…</p>
+        </PageContainer>
+      </main>
+    );
+  }
+
+  if (!admin) {
+    return (
+      <main className="flex-1">
+        <PageContainer narrow className="py-14">
+          <SurfaceCard className="p-6">
+            <h1 className="text-xl font-semibold text-white">Admin access required</h1>
+            <p className="mt-2 text-zinc-400">
+              {user
+                ? 'Your account is not an admin. Sign in with an @acyclic.dev email to view leads.'
+                : 'Please sign in with an @acyclic.dev email to view leads.'}
+            </p>
+          </SurfaceCard>
+        </PageContainer>
+      </main>
+    );
+  }
+
   return (
     <main className="flex-1">
       <PageContainer wide className="py-10 sm:py-14">
@@ -525,6 +569,7 @@ export default function LeadsPage() {
                                       <AuditStatusBadge
                                         status={lead.audit_status ?? 'completed'}
                                         auditId={lead.last_audit_id}
+                                        tier={lead.audit_tier}
                                       />
                                     )}
                                   </div>

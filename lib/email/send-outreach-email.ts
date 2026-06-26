@@ -100,12 +100,12 @@ function buildOutreachEmailHtml(params: SendOutreachEmailParams): string {
   const ctaLabel = (params.ctaLabel ?? '').trim() || 'Get your free audit →';
 
   const preheader = keyword
-    ? `Quick note on “${keyword}” — ${businessName} is one spot from the top.`
+    ? `You're not #1 for “${keyword}” — quick note for ${businessName}.`
     : `A quick, free SEO win for ${businessName}.`;
 
   const headline =
-    keyword && rankPosition
-      ? `You're #${rankPosition} for “${escapeHtml(keyword)}”`
+    keyword
+      ? `You're not #1 for “${escapeHtml(keyword)}”`
       : `A quick win for ${escapeHtml(businessName)}`;
 
   const subhead = location
@@ -113,9 +113,11 @@ function buildOutreachEmailHtml(params: SendOutreachEmailParams): string {
     : escapeHtml(businessName);
 
   const rankPill =
-    rankPosition != null
-      ? `<span style="display:inline-block;padding:4px 12px;border-radius:999px;background:rgba(255,255,255,0.18);color:#ffffff;font-size:12px;font-weight:600;letter-spacing:0.02em;">Ranked&nbsp;#${rankPosition}</span>`
-      : '';
+    rankPosition != null && rankPosition > 1
+      ? `<span style="display:inline-block;padding:4px 12px;border-radius:999px;background:rgba(255,255,255,0.18);color:#ffffff;font-size:12px;font-weight:600;letter-spacing:0.02em;">Not&nbsp;#1&nbsp;·&nbsp;#${rankPosition}</span>`
+      : keyword
+        ? `<span style="display:inline-block;padding:4px 12px;border-radius:999px;background:rgba(255,255,255,0.18);color:#ffffff;font-size:12px;font-weight:600;letter-spacing:0.02em;">Not&nbsp;#1</span>`
+        : '';
 
   const testBanner = testMode
     ? `<tr><td style="padding:0 0 18px;">

@@ -1,11 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { runResearchAgent } from '@/lib/research/agent';
-import {
-  createPendingAudit,
-  findAuditByLeadId,
-  markAuditFailed,
-  saveAuditToSupabase,
-} from '@/lib/research/persist';
+import { runLightLeadAudit } from '@/lib/leads/light-audit';
+import { saveLightAuditToSupabase } from '@/lib/leads/persist-light-audit';
+import { findAuditByLeadId } from '@/lib/research/persist';
 
 const MAX_AUTO_RESEARCH_PER_RUN = 5;
 
@@ -25,47 +21,29 @@ export interface AutoResearchResult {
   background: number;
 }
 
-async function runLeadResearch(supabase: SupabaseClient, lead: LeadForResearch): Promise<'completed' | 'skipped' | 'failed'> {
+async function runLeadLightScan(
+  supabase: SupabaseClient,
+  lead: LeadForResearch
+): Promise<'completed' | 'skipped' | 'failed'> {
   const existing = await findAuditByLeadId(supabase, lead.id);
   if (existing?.status === 'completed') {
     await supabase.from('leads').update({ last_audit_id: existing.id }).eq('id', lead.id);
     return 'skipped';
   }
 
-  let pendingAuditId: string | undefined;
-
   try {
-    pendingAuditId = await createPendingAudit(supabase, {
-      leadId: lead.id,
-      targetUrl: lead.website_url,
-      keyword: lead.keyword,
+    const result = await runLightLeadAudit({
       businessName: lead.business_name,
-    });
-
-    const result = await runResearchAgent({
-      targetUrl: lead.website_url,
       keyword: lead.keyword,
-      businessName: lead.business_name,
+      websiteUrl: lead.website_url,
       location: lead.location ?? 'London',
-      leadId: lead.id,
     });
 
-    await supabase.from('site_audits').delete().eq('id', pendingAuditId);
-
-    const { auditId } = await saveAuditToSupabase(supabase, result);
-
-    await supabase
-      .from('leads')
-      .update({ last_audit_id: auditId, updated_at: new Date().toISOString() })
-      .eq('id', lead.id);
-
+    await saveLightAuditToSupabase(supabase, lead.id, result);
     return 'completed';
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Auto-research failed';
-    console.error(`[auto-research] failed for lead ${lead.id} (${lead.business_name}):`, message);
-    if (pendingAuditId) {
-      await markAuditFailed(supabase, pendingAuditId, message);
-    }
+    const message = error instanceof Error ? error.message : 'Light SERP scan failed';
+    console.error(`[auto-research] light scan failed for lead ${lead.id} (${lead.business_name}):`, message);
     return 'failed';
   }
 }
@@ -108,8 +86,8 @@ async function collectEligibleLeads(
 }
 
 /**
- * Queue research for leads with website URLs. Awaits up to maxPerRun audits;
- * remaining eligible leads run in the background (fire-and-forget).
+ * Queue a Tavily-only SERP scan for new leads (no LLM, no crawl).
+ * Awaits up to maxPerRun scans; remaining eligible leads run in the background.
  */
 export async function queueAutoResearchForLeads(
   supabase: SupabaseClient,
@@ -127,7 +105,7 @@ export async function queueAutoResearchForLeads(
   result.background = backgroundBatch.length;
 
   const syncResults = await Promise.allSettled(
-    syncBatch.map((lead) => runLeadResearch(supabase, lead))
+    syncBatch.map((lead) => runLeadLightScan(supabase, lead))
   );
 
   for (const settled of syncResults) {
@@ -141,13 +119,13 @@ export async function queueAutoResearchForLeads(
   }
 
   if (backgroundBatch.length > 0) {
-    void Promise.allSettled(backgroundBatch.map((lead) => runLeadResearch(supabase, lead))).then(
+    void Promise.allSettled(backgroundBatch.map((lead) => runLeadLightScan(supabase, lead))).then(
       (results) => {
         for (const settled of results) {
           if (settled.status === 'rejected') {
             console.error('[auto-research] background rejected:', settled.reason);
           } else if (settled.value === 'failed') {
-            console.error('[auto-research] background audit failed for a lead');
+            console.error('[auto-research] background light scan failed for a lead');
           }
         }
       }

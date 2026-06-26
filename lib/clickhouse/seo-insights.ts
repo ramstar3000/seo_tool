@@ -1,4 +1,7 @@
 import { formatClickHouseDateTime64, getClickHouseClient } from '@/lib/clickhouse/client';
+import { recordAgentLoopEvent } from '@/lib/clickhouse/agent-loop';
+import { traceResearchAudit } from '@/lib/langfuse/trace-llm';
+import { flushLangfuseSpans } from '@/lib/langfuse/otel';
 import { ensureClickHouseSchema } from '@/lib/clickhouse/schema';
 import type { AuditFinding, SiteAudit } from '@/lib/research/types';
 
@@ -10,6 +13,8 @@ export interface RecordAuditInsightsParams {
   audit: Omit<SiteAudit, 'id' | 'created_at'>;
   findings: AuditFinding[];
   rankPosition?: number | null;
+  lcpMs?: number | null;
+  competitorCount?: number | null;
 }
 
 export interface SeoPromptContext {
@@ -23,7 +28,24 @@ export interface SeoPromptContext {
   latestSummary: string | null;
   latestRecommendations: string | null;
   trendSummary: string | null;
+  persistentFindings: Array<{
+    title: string;
+    category: string;
+    severity: string;
+    auditCount: number;
+    daysPersisting: number;
+  }>;
   promptBlock: string;
+}
+
+export interface PersistentFinding {
+  title: string;
+  category: string;
+  severity: string;
+  auditCount: number;
+  daysPersisting: number;
+  firstSeen: string;
+  lastSeen: string;
 }
 
 export interface SeoInsightMetrics {
@@ -35,6 +57,13 @@ export interface SeoInsightMetrics {
   infoCount: number;
   byCategory: Array<{ category: string; critical: number; warning: number; info: number }>;
   recentFindings: Array<{ title: string; severity: string; category: string; completedAt: string }>;
+  persistentFindings: Array<{
+    title: string;
+    category: string;
+    severity: string;
+    auditCount: number;
+    daysPersisting: number;
+  }>;
 }
 
 function truncate(text: string | null | undefined, max: number): string {
@@ -65,7 +94,7 @@ export async function recordAuditInsights(params: RecordAuditInsightsParams): Pr
   const ready = await ensureClickHouseSchema();
   if (!ready) return;
 
-  const { auditId, audit, findings, rankPosition } = params;
+  const { auditId, audit, findings, rankPosition, lcpMs, competitorCount } = params;
   const completedAt = formatClickHouseDateTime64(
     audit.completed_at ? new Date(audit.completed_at) : new Date(),
   );
@@ -80,6 +109,8 @@ export async function recordAuditInsights(params: RecordAuditInsightsParams): Pr
       keyword: audit.keyword,
       target_url: audit.target_url,
       rank_position: rankPosition ?? null,
+      lcp_ms: lcpMs ?? null,
+      competitor_count: competitorCount ?? null,
       severity: '',
       category: '',
       title: '',
@@ -100,6 +131,8 @@ export async function recordAuditInsights(params: RecordAuditInsightsParams): Pr
       keyword: audit.keyword,
       target_url: audit.target_url,
       rank_position: rankPosition ?? null,
+      lcp_ms: lcpMs ?? null,
+      competitor_count: competitorCount ?? null,
       severity: f.severity,
       category: f.category,
       title: f.title,
@@ -123,6 +156,34 @@ export async function recordAuditInsights(params: RecordAuditInsightsParams): Pr
   } catch (error) {
     console.error('[clickhouse] failed to record SEO insight events:', error);
   }
+
+  void recordAgentLoopEvent({
+    loopType: 'audit_ingest',
+    leadId: audit.lead_id,
+    auditId,
+    payload: {
+      businessName: audit.business_name,
+      keyword: audit.keyword,
+      findingCount: findings.length,
+    },
+    metricsSnapshot: {
+      rankPosition,
+      lcpMs,
+      critical: severityCounts.critical,
+      warning: severityCounts.warning,
+    },
+  });
+
+  await traceResearchAudit({
+    auditId,
+    leadId: audit.lead_id,
+    businessName: audit.business_name,
+    keyword: audit.keyword,
+    findingCount: findings.length,
+    criticalCount: severityCounts.critical,
+  });
+
+  await flushLangfuseSpans();
 }
 
 function buildWhereClause(params: {
@@ -155,14 +216,30 @@ function buildTrendSummary(params: {
   recurringFindings: Array<{ title: string; count: number; category: string }>;
   criticalByCategory: Record<string, number>;
   warningByCategory: Record<string, number>;
+  persistentFindings?: Array<{ title: string; severity: string; daysPersisting: number; auditCount: number }>;
 }): string | null {
-  const { auditCount, recurringFindings, criticalByCategory, warningByCategory } = params;
-  if (auditCount <= 1 && recurringFindings.length === 0) return null;
+  const { auditCount, recurringFindings, criticalByCategory, warningByCategory, persistentFindings } =
+    params;
+  if (auditCount <= 1 && recurringFindings.length === 0 && !persistentFindings?.length) return null;
 
   const parts: string[] = [];
 
+  const criticalPersistent = (persistentFindings ?? []).filter(
+    (f) => f.severity === 'critical' && f.daysPersisting >= 7
+  );
+  if (criticalPersistent.length > 0) {
+    const maxDays = Math.max(...criticalPersistent.map((f) => f.daysPersisting));
+    const titles = criticalPersistent
+      .slice(0, 3)
+      .map((f) => f.title)
+      .join('", "');
+    parts.push(
+      `${criticalPersistent.length} critical ${criticalPersistent.length === 1 ? 'issue' : 'issues'} persisting ${maxDays} days (e.g. "${titles}")`
+    );
+  }
+
   const persistent = recurringFindings.filter((f) => f.count >= 2);
-  if (persistent.length > 0) {
+  if (persistent.length > 0 && criticalPersistent.length === 0) {
     const top = persistent.slice(0, 3);
     const issueWord = persistent.length === 1 ? 'issue' : 'issues';
     parts.push(
@@ -182,7 +259,9 @@ function buildTrendSummary(params: {
   return parts.length > 0 ? parts.join('; ') : null;
 }
 
-function buildPromptBlock(context: Omit<SeoPromptContext, 'source' | 'promptBlock'>): string {
+function buildPromptBlock(
+  context: Omit<SeoPromptContext, 'source' | 'promptBlock'>
+): string {
   const lines: string[] = ['Historical SEO insight memory (ClickHouse):'];
 
   if (context.trendSummary) {
@@ -220,6 +299,18 @@ function buildPromptBlock(context: Omit<SeoPromptContext, 'source' | 'promptBloc
     );
   }
 
+  if (context.persistentFindings && context.persistentFindings.length > 0) {
+    lines.push(
+      'Issues persisting across re-audits:',
+      ...context.persistentFindings
+        .slice(0, 5)
+        .map(
+          (f) =>
+            `- [${f.severity}/${f.category}] ${f.title} — ${f.daysPersisting} days, ${f.auditCount} audits`
+        )
+    );
+  }
+
   if (context.latestSummary) {
     lines.push(`Latest audit summary: ${context.latestSummary}`);
   }
@@ -241,8 +332,64 @@ const emptyContext = (): SeoPromptContext => ({
   latestSummary: null,
   latestRecommendations: null,
   trendSummary: null,
+  persistentFindings: [],
   promptBlock: '',
 });
+
+export async function getPersistentFindings(days = 90): Promise<PersistentFinding[]> {
+  const client = getClickHouseClient();
+  if (!client) return [];
+
+  const ready = await ensureClickHouseSchema();
+  if (!ready) return [];
+
+  try {
+    const result = await client.query({
+      query: `
+        SELECT
+          title,
+          category,
+          severity,
+          count(DISTINCT audit_id) AS audit_count,
+          min(completed_at) AS first_seen,
+          max(completed_at) AS last_seen,
+          dateDiff('day', min(completed_at), max(completed_at)) AS days_persisting
+        FROM seo_insight_events
+        WHERE event_type = 'finding'
+          AND completed_at >= now() - INTERVAL {days:UInt16} DAY
+        GROUP BY title, category, severity
+        HAVING audit_count >= 2 OR days_persisting >= 7
+        ORDER BY days_persisting DESC, audit_count DESC, severity ASC
+        LIMIT 12
+      `,
+      query_params: { days },
+      format: 'JSONEachRow',
+    });
+
+    const rows = (await result.json()) as {
+      title: string;
+      category: string;
+      severity: string;
+      audit_count: string;
+      first_seen: string;
+      last_seen: string;
+      days_persisting: string;
+    }[];
+
+    return rows.map((row) => ({
+      title: row.title,
+      category: row.category,
+      severity: row.severity,
+      auditCount: Number(row.audit_count ?? 0),
+      daysPersisting: Number(row.days_persisting ?? 0),
+      firstSeen: row.first_seen,
+      lastSeen: row.last_seen,
+    }));
+  } catch (error) {
+    console.error('[clickhouse] persistent findings query failed:', error);
+    return [];
+  }
+}
 
 export async function getSeoPromptContext(params: {
   leadId?: string;
@@ -260,7 +407,8 @@ export async function getSeoPromptContext(params: {
   const { clause, queryParams } = buildWhereClause({ ...params, days });
 
   try {
-    const [categoryRes, recurringRes, latestRes, rankRes, auditCountRes] = await Promise.all([
+    const [categoryRes, recurringRes, latestRes, rankRes, auditCountRes, persistentRes] =
+      await Promise.all([
       client.query({
         query: `
           SELECT category, severity, count() AS cnt
@@ -314,6 +462,21 @@ export async function getSeoPromptContext(params: {
         query_params: queryParams,
         format: 'JSONEachRow',
       }),
+      client.query({
+        query: `
+          SELECT title, category, severity,
+            count(DISTINCT audit_id) AS audit_count,
+            dateDiff('day', min(completed_at), max(completed_at)) AS days_persisting
+          FROM seo_insight_events
+          WHERE event_type = 'finding' AND ${clause}
+          GROUP BY title, category, severity
+          HAVING audit_count >= 2 OR days_persisting >= 7
+          ORDER BY days_persisting DESC
+          LIMIT 8
+        `,
+        query_params: queryParams,
+        format: 'JSONEachRow',
+      }),
     ]);
 
     const categoryRows = (await categoryRes.json()) as {
@@ -336,6 +499,13 @@ export async function getSeoPromptContext(params: {
       completed_at: string;
     }[];
     const auditCountRows = (await auditCountRes.json()) as { audit_count: string }[];
+    const persistentRows = (await persistentRes.json()) as {
+      title: string;
+      category: string;
+      severity: string;
+      audit_count: string;
+      days_persisting: string;
+    }[];
 
     const criticalByCategory: Record<string, number> = {};
     const warningByCategory: Record<string, number> = {};
@@ -364,11 +534,20 @@ export async function getSeoPromptContext(params: {
       rankPosition: r.rank_position === null ? null : Number(r.rank_position),
     }));
 
+    const persistentFindings = persistentRows.map((r) => ({
+      title: r.title,
+      category: r.category,
+      severity: r.severity,
+      auditCount: Number(r.audit_count ?? 0),
+      daysPersisting: Number(r.days_persisting ?? 0),
+    }));
+
     const trendSummary = buildTrendSummary({
       auditCount,
       recurringFindings,
       criticalByCategory,
       warningByCategory,
+      persistentFindings,
     });
 
     const base = {
@@ -381,6 +560,7 @@ export async function getSeoPromptContext(params: {
       latestSummary: latest?.summary_snippet || null,
       latestRecommendations: latest?.recommendations_snippet || null,
       trendSummary,
+      persistentFindings,
     };
 
     return {
@@ -410,6 +590,7 @@ export async function getSeoInsightMetrics(params: {
     infoCount: 0,
     byCategory: [],
     recentFindings: [],
+    persistentFindings: [],
   };
 
   if (!client) return empty;
@@ -499,6 +680,13 @@ export async function getSeoInsightMetrics(params: {
         severity: r.severity,
         category: r.category,
         completedAt: r.completed_at,
+      })),
+      persistentFindings: (await getPersistentFindings(days)).map((f) => ({
+        title: f.title,
+        category: f.category,
+        severity: f.severity,
+        auditCount: f.auditCount,
+        daysPersisting: f.daysPersisting,
       })),
     };
   } catch (error) {

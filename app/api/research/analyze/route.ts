@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireUser } from '@/lib/auth/require-user';
+import { isLightAuditTrace } from '@/lib/leads/light-audit';
 import { runResearchAgent } from '@/lib/research/agent';
 import {
   createPendingAudit,
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
       location = lead.location ?? 'London';
 
       const existing = await findAuditByLeadId(supabase, leadId);
-      if (existing?.status === 'completed') {
+      if (existing?.status === 'completed' && !isLightAuditTrace(existing.tool_trace)) {
         return NextResponse.json({ auditId: existing.id, existing: true });
       }
     }

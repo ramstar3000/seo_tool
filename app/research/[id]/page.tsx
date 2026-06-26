@@ -6,6 +6,7 @@ import { LinkedRepositoriesPanel } from '@/components/LinkedRepositoriesPanel';
 import { ReportSkeleton } from '@/components/LoadingSkeleton';
 import { SocialPresencePanel } from '@/components/SocialPresencePanel';
 import { PageContainer, SurfaceCard } from '@/components/ui/PageContainer';
+import { isLightAuditTrace } from '@/lib/leads/light-audit';
 import type { AuditDetail } from '@/lib/research/persist';
 
 function SeverityBadge({ severity }: { severity: string }) {
@@ -66,7 +67,9 @@ export default function ResearchAuditPage({ params }: { params: Promise<{ id: st
   const otherFindings = useMemo(
     () =>
       audit?.findings.filter(
-        (f) => !['social', 'seo', 'technical'].includes(f.category)
+        (f) =>
+          !['social', 'seo', 'technical'].includes(f.category) &&
+          !(f.evidence && typeof f.evidence === 'object' && (f.evidence as { mustDo?: boolean }).mustDo)
       ) ?? [],
     [audit]
   );
@@ -81,6 +84,19 @@ export default function ResearchAuditPage({ params }: { params: Promise<{ id: st
     }));
     return fromFindings.length > 0 ? fromFindings : fromPresence;
   }, [audit, socialFindings]);
+
+  const isLightScan = useMemo(
+    () => (audit ? isLightAuditTrace(audit.tool_trace) : false),
+    [audit]
+  );
+
+  const mustDoFindings = useMemo(
+    () =>
+      audit?.findings.filter(
+        (f) => f.evidence && typeof f.evidence === 'object' && (f.evidence as { mustDo?: boolean }).mustDo
+      ) ?? [],
+    [audit]
+  );
 
   if (isLoading) {
     return (
@@ -109,7 +125,14 @@ export default function ResearchAuditPage({ params }: { params: Promise<{ id: st
     <main className="flex-1">
       <PageContainer className="py-10 sm:py-14 space-y-10">
         <header className="space-y-2 border-b border-white/[0.06] pb-8">
-          <p className="text-sm text-teal-400 font-medium">Research report</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm text-teal-400 font-medium">Research report</p>
+            {isLightScan && (
+              <span className="inline-flex px-2 py-0.5 rounded-md border text-xs bg-sky-500/10 text-sky-300 border-sky-500/25">
+                Light SERP scan
+              </span>
+            )}
+          </div>
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white break-words">
             {audit.business_name}
           </h1>
@@ -148,6 +171,20 @@ export default function ResearchAuditPage({ params }: { params: Promise<{ id: st
                 {audit.auto_pr.pr_url}
               </a>
             </p>
+          </SurfaceCard>
+        )}
+
+        {mustDoFindings.length > 0 && (
+          <SurfaceCard className="p-5 sm:p-6 space-y-4 border-amber-500/25 bg-amber-500/[0.04]">
+            <h2 className="text-lg font-semibold text-amber-200">MUST_DO</h2>
+            <ol className="space-y-3 list-decimal list-inside text-zinc-200">
+              {mustDoFindings.map((finding) => (
+                <li key={finding.id} className="leading-relaxed">
+                  <span className="font-medium text-white">{finding.title}</span>
+                  <span className="text-zinc-300"> — {finding.description}</span>
+                </li>
+              ))}
+            </ol>
           </SurfaceCard>
         )}
 

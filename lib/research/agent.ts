@@ -53,6 +53,7 @@ async function synthesizeFinalReport(ctx: ToolContext): Promise<{ summary: strin
           agentSummary: ctx.summary,
           agentRecommendations: ctx.recommendations,
         }),
+        telemetry: { functionId: 'findings-synthesis' },
       });
 
       return object;
@@ -116,6 +117,7 @@ async function runResearchAgentWithLlm(params: RunResearchAgentParams): Promise<
     onStepStart: ({ stepNumber }) => {
       currentTurn = stepNumber;
     },
+    telemetry: { functionId: 'research-agent' },
   });
 
   const report = await synthesizeFinalReport(ctx);

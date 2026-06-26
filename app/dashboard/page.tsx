@@ -63,6 +63,34 @@ interface SeoInsightMetrics {
   infoCount: number;
   byCategory: Array<{ category: string; critical: number; warning: number; info: number }>;
   recentFindings: Array<{ title: string; severity: string; category: string; completedAt: string }>;
+  persistentFindings?: Array<{
+    title: string;
+    category: string;
+    severity: string;
+    auditCount: number;
+    daysPersisting: number;
+  }>;
+}
+
+interface ClickHouseShowcaseResponse {
+  source: 'clickhouse';
+  scale: {
+    analyticsEventCount: number;
+    seoInsightEventCount: number;
+    distinctAudits: number;
+    distinctLeads: number;
+  };
+  persistentFindings: Array<{
+    title: string;
+    severity: string;
+    category: string;
+    daysPersisting: number;
+    auditCount: number;
+  }>;
+  promptPreview: {
+    trendSummary: string | null;
+    promptBlock: string;
+  };
 }
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -157,6 +185,7 @@ export default function Dashboard() {
   const [hourlyFunnel, setHourlyFunnel] = useState<HourlyFunnelRow[]>([]);
   const [costSummary, setCostSummary] = useState<CostSummary | null>(null);
   const [seoInsights, setSeoInsights] = useState<SeoInsightMetrics | null>(null);
+  const [clickhouseShowcase, setClickhouseShowcase] = useState<ClickHouseShowcaseResponse | null>(null);
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(true);
   const [isLoadingCost, setIsLoadingCost] = useState(true);
   const [isLoadingSeoInsights, setIsLoadingSeoInsights] = useState(true);
@@ -215,13 +244,27 @@ export default function Dashboard() {
     }
   }, []);
 
+  const loadShowcase = useCallback(async () => {
+    try {
+      const response = await fetch('/api/clickhouse/showcase');
+      if (!response.ok) {
+        setClickhouseShowcase(null);
+        return;
+      }
+      setClickhouseShowcase((await response.json()) as ClickHouseShowcaseResponse);
+    } catch {
+      setClickhouseShowcase(null);
+    }
+  }, []);
+
   useEffect(() => {
     void loadMetrics();
   }, [loadMetrics]);
 
   useEffect(() => {
     void loadSeoInsights();
-  }, [loadSeoInsights]);
+    void loadShowcase();
+  }, [loadSeoInsights, loadShowcase]);
 
   useEffect(() => {
     const supabase = createBrowserSupabaseClient();
@@ -274,6 +317,14 @@ export default function Dashboard() {
               <span className="text-xs font-medium px-2 py-1 rounded-md bg-yellow-500/10 text-yellow-200 border border-yellow-500/20">
                 ClickHouse analytics
               </span>
+            )}
+            {metricsSource === 'clickhouse' && (
+              <Link
+                href="/clickhouse"
+                className="text-xs font-medium px-2 py-1 rounded-md bg-yellow-500/5 text-yellow-300/90 border border-yellow-500/15 hover:bg-yellow-500/10 transition-colors"
+              >
+                Deep dive →
+              </Link>
             )}
             {seoInsights?.source === 'clickhouse' && (
               <span className="text-xs font-medium px-2 py-1 rounded-md bg-violet-500/10 text-violet-200 border border-violet-500/20">
@@ -420,6 +471,71 @@ export default function Dashboard() {
                     </li>
                   ))}
                 </ul>
+              </SurfaceCard>
+            )}
+            {(seoInsights.persistentFindings?.length ?? 0) > 0 && (
+              <SurfaceCard className="mt-4 p-5 sm:p-6 space-y-3">
+                <p className="text-sm font-medium text-zinc-300">Issues persisting across re-audits</p>
+                <p className="text-xs text-zinc-500">ClickHouse dateDiff + count(DISTINCT audit_id)</p>
+                <ul className="space-y-2 text-sm">
+                  {seoInsights.persistentFindings!.map((finding) => (
+                    <li key={finding.title} className="flex justify-between gap-3 text-zinc-400">
+                      <span>
+                        <span className={finding.severity === 'critical' ? 'text-red-400' : 'text-amber-400'}>
+                          [{finding.severity}]
+                        </span>{' '}
+                        {finding.title}
+                      </span>
+                      <span className="text-zinc-500 tabular-nums shrink-0">
+                        {finding.daysPersisting}d · {finding.auditCount} audits
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </SurfaceCard>
+            )}
+          </section>
+        )}
+
+        {clickhouseShowcase && (
+          <section aria-labelledby="ch-showcase-heading">
+            <h2 id="ch-showcase-heading" className="text-lg sm:text-xl font-semibold text-white mb-4">
+              ClickHouse agent memory
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-4 mb-4">
+              <SurfaceCard className="p-5 sm:p-6">
+                <p className="text-sm text-zinc-400 mb-1">Analytics events</p>
+                <p className="text-2xl font-semibold text-white tabular-nums">
+                  {clickhouseShowcase.scale.analyticsEventCount.toLocaleString()}
+                </p>
+              </SurfaceCard>
+              <SurfaceCard className="p-5 sm:p-6">
+                <p className="text-sm text-zinc-400 mb-1">SEO insight rows</p>
+                <p className="text-2xl font-semibold text-white tabular-nums">
+                  {clickhouseShowcase.scale.seoInsightEventCount.toLocaleString()}
+                </p>
+              </SurfaceCard>
+              <SurfaceCard className="p-5 sm:p-6">
+                <p className="text-sm text-zinc-400 mb-1">Audits tracked</p>
+                <p className="text-2xl font-semibold text-white tabular-nums">
+                  {clickhouseShowcase.scale.distinctAudits}
+                </p>
+              </SurfaceCard>
+              <SurfaceCard className="p-5 sm:p-6">
+                <p className="text-sm text-zinc-400 mb-1">Leads tracked</p>
+                <p className="text-2xl font-semibold text-white tabular-nums">
+                  {clickhouseShowcase.scale.distinctLeads}
+                </p>
+              </SurfaceCard>
+            </div>
+            {clickhouseShowcase.promptPreview.trendSummary && (
+              <SurfaceCard className="p-5 sm:p-6 space-y-2">
+                <p className="text-sm font-medium text-violet-200">LLM prompt context (aggregated)</p>
+                <p className="text-sm text-zinc-300">{clickhouseShowcase.promptPreview.trendSummary}</p>
+                <p className="text-xs text-zinc-500 mt-2">
+                  Full block feeds GitHub PR + CRO optimize —{' '}
+                  <code className="text-teal-400">GET /api/seo/insights</code>
+                </p>
               </SurfaceCard>
             )}
           </section>

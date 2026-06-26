@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiError, apiNotConfigured } from '@/lib/api/errors';
+import { requireAdmin } from '@/lib/auth/require-admin';
+import { isLightAuditTrace } from '@/lib/leads/light-audit';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 export async function GET(request: NextRequest) {
+  const auth = await requireAdmin();
+  if ('error' in auth) return auth.error;
+
   const supabase = getSupabaseAdmin();
   if (!supabase) {
     return apiNotConfigured('Supabase');
@@ -42,20 +47,23 @@ export async function GET(request: NextRequest) {
     .map((row) => row.last_audit_id as string | null)
     .filter((id): id is string => Boolean(id));
 
-  let auditStatusById = new Map<string, string>();
+  const auditStatusById = new Map<string, string>();
+  const auditTierById = new Map<string, 'light' | 'full'>();
 
   if (auditIds.length > 0) {
     const { data: audits } = await supabase
       .from('site_audits')
-      .select('id, status')
+      .select('id, status, tool_trace')
       .in('id', auditIds);
 
-    auditStatusById = new Map(
-      (audits ?? []).map((a) => [a.id as string, a.status as string])
-    );
+    for (const a of audits ?? []) {
+      const id = a.id as string;
+      auditStatusById.set(id, a.status as string);
+      auditTierById.set(id, isLightAuditTrace(a.tool_trace) ? 'light' : 'full');
+    }
   }
 
-  let autoPrByAuditId = new Map<
+  const autoPrByAuditId = new Map<
     string,
     { pr_url: string; pr_number: number | null; audit_id: string }
   >();
@@ -85,6 +93,9 @@ export async function GET(request: NextRequest) {
     ...row,
     audit_status: row.last_audit_id
       ? (auditStatusById.get(row.last_audit_id as string) ?? null)
+      : null,
+    audit_tier: row.last_audit_id
+      ? (auditTierById.get(row.last_audit_id as string) ?? null)
       : null,
     auto_pr: row.last_audit_id
       ? (autoPrByAuditId.get(row.last_audit_id as string) ?? null)

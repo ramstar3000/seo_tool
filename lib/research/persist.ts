@@ -119,6 +119,8 @@ export async function saveAuditToSupabase(
     audit,
     findings,
     rankPosition,
+    lcpMs: extractPageSpeedFromTrace(toolTrace)?.lcpMs ?? null,
+    competitorCount: competitors.length > 0 ? competitors.length : null,
   });
 
   return { auditId };

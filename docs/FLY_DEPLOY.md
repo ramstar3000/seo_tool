@@ -51,6 +51,40 @@ fly secrets set CRON_SECRET="$(openssl rand -hex 32)"
 
 **Optional:** `TAVILY_API_KEY`, `FIRECRAWL_API_KEY`, `GITHUB_TOKEN`, `GOOGLE_PAGESPEED_API_KEY`, `SLACK_WEBHOOK_URL`
 
+**ClickHouse analytics (optional — hackathon / prod analytics):**
+
+| Secret | Purpose |
+|--------|---------|
+| `CLICKHOUSE_URL` | Cloud HTTPS endpoint (`https://….clickhouse.cloud:8443`) |
+| `CLICKHOUSE_USER` | Usually `default` |
+| `CLICKHOUSE_PASSWORD` | Database password (from Connect tab or `npm run clickhouse:cloud-provision`) |
+| `CLICKHOUSE_DATABASE` | Usually `default` |
+
+Local provisioning (writes DB creds to `.env`; import to Fly afterward):
+
+```bash
+npm run clickhouse:cloud-provision   # uses CLICKHOUSE_KEY_ID + CLICKHOUSE_API_KEY
+npm run clickhouse:init
+fly secrets import < <(grep '^CLICKHOUSE_' .env)
+fly deploy
+curl -s https://synapsecro.fly.dev/api/health | jq '.config.clickhouse, .config.clickhouseOk'
+```
+
+See [`docs/CLICKHOUSE.md`](CLICKHOUSE.md) for local Docker smoke tests.
+
+**Langfuse (optional — LLM traces + eval scores):**
+
+| Secret | Purpose |
+|--------|---------|
+| `LANGFUSE_PUBLIC_KEY` | From [cloud.langfuse.com](https://cloud.langfuse.com) → Settings → API Keys |
+| `LANGFUSE_SECRET_KEY` | Langfuse secret key |
+| `LANGFUSE_BASE_URL` | Optional (`https://cloud.langfuse.com` or US region) |
+
+```bash
+fly secrets set LANGFUSE_PUBLIC_KEY=pk-lf-... LANGFUSE_SECRET_KEY=sk-lf-...
+curl -s https://synapsecro.fly.dev/api/health | jq '.config.langfuse'
+```
+
 **App URL:** Fly sets `FLY_APP_NAME` automatically. Audit emails use `https://{app}.fly.dev` unless you set `NEXT_PUBLIC_APP_URL`.
 
 List secrets (names only):
@@ -80,6 +114,7 @@ Verify:
 ```bash
 curl -s https://synapsecro.fly.dev/api/health | jq
 # expect: "schema": true, "supabase": true
+# with ClickHouse secrets: "clickhouse": true, "clickhouseOk": true
 ```
 
 ---
@@ -173,3 +208,5 @@ Add the DNS records Fly shows, then set `NEXT_PUBLIC_APP_URL=https://synapsecro.
 | Auth redirect fails | Add `https://YOUR_APP.fly.dev/auth/callback` in Supabase |
 | Cron 401 | Set `CRON_SECRET` on Fly; use `Authorization: Bearer ...` header |
 | Audit timeouts | `fly scale memory 1024` or `2048` — research agent is memory-heavy |
+| `clickhouse: false` on `/api/health` | Set `CLICKHOUSE_URL` + `CLICKHOUSE_PASSWORD` on Fly and redeploy |
+| ClickHouse ping fails in prod | Wake idle service: `curl https://YOUR_HOST.clickhouse.cloud:8443/ping` |

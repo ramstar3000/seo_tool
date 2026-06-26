@@ -13,8 +13,11 @@ import { createClient } from '@clickhouse/client';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { loadDotEnv } from './lib/load-dotenv.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+loadDotEnv();
 
 const url = process.env.CLICKHOUSE_URL?.trim() || 'http://localhost:8123';
 const user = process.env.CLICKHOUSE_USER?.trim() || 'default';

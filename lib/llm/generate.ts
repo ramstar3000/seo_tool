@@ -1,6 +1,7 @@
 import { generateObject, generateText, type ToolSet } from 'ai';
 import type { z } from 'zod';
 import { getResearchModel } from '@/lib/llm/client';
+import { hasLangfuseConfig } from '@/lib/langfuse/client';
 import {
   assertLlmSpendCapNotExceeded,
   LlmSpendCapExceededError,
@@ -8,6 +9,10 @@ import {
 } from '@/lib/llm/usage-cap';
 
 const SECRET_PATTERNS = [/sk-[a-zA-Z0-9_-]+/g, /sk-ant-[a-zA-Z0-9_-]+/g, /AIza[a-zA-Z0-9_-]+/g];
+
+export interface LlmTelemetryOptions {
+  functionId: string;
+}
 
 function sanitizeErrorMessage(message: string): string {
   let sanitized = message;
@@ -25,10 +30,16 @@ function wrapLlmError(error: unknown): never {
   throw new Error(sanitizeErrorMessage(message));
 }
 
+function telemetryFor(functionId: string) {
+  if (!hasLangfuseConfig()) return undefined;
+  return { functionId };
+}
+
 export async function runLlmText(params: {
   system: string;
   prompt: string;
   maxOutputTokens?: number;
+  telemetry?: LlmTelemetryOptions;
 }): Promise<string> {
   try {
     await assertLlmSpendCapNotExceeded();
@@ -37,6 +48,7 @@ export async function runLlmText(params: {
       system: params.system,
       prompt: params.prompt,
       maxOutputTokens: params.maxOutputTokens ?? 8192,
+      telemetry: telemetryFor(params.telemetry?.functionId ?? 'llm-text'),
     });
     await recordLlmUsage(result.totalUsage);
     return result.text.trim();
@@ -49,6 +61,7 @@ export async function runLlmObject<T extends z.ZodType>(params: {
   system: string;
   prompt: string;
   schema: T;
+  telemetry?: LlmTelemetryOptions;
 }): Promise<z.infer<T>> {
   try {
     await assertLlmSpendCapNotExceeded();
@@ -57,6 +70,7 @@ export async function runLlmObject<T extends z.ZodType>(params: {
       schema: params.schema,
       system: params.system,
       prompt: params.prompt,
+      telemetry: telemetryFor(params.telemetry?.functionId ?? 'llm-object'),
     });
     await recordLlmUsage(result.usage);
     return result.object as z.infer<T>;
@@ -67,11 +81,15 @@ export async function runLlmObject<T extends z.ZodType>(params: {
 
 /** Agent multi-step generateText — same spend cap and usage recording as runLlmText. */
 export async function runLlmAgentGenerateText<TOOLS extends ToolSet>(
-  params: Parameters<typeof generateText<TOOLS>>[0]
+  params: Parameters<typeof generateText<TOOLS>>[0] & { telemetry?: LlmTelemetryOptions }
 ): Promise<Awaited<ReturnType<typeof generateText<TOOLS>>>> {
+  const { telemetry, ...rest } = params;
   try {
     await assertLlmSpendCapNotExceeded();
-    const result = await generateText(params);
+    const result = await generateText({
+      ...rest,
+      telemetry: telemetryFor(telemetry?.functionId ?? 'llm-agent'),
+    });
     await recordLlmUsage(result.totalUsage);
     return result as Awaited<ReturnType<typeof generateText<TOOLS>>>;
   } catch (error) {

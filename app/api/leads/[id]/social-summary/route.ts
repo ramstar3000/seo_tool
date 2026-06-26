@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireUser } from '@/lib/auth/require-user';
+import { requireAdmin } from '@/lib/auth/require-admin';
 import { getSocialSummaryByLeadId } from '@/lib/research/persist';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
@@ -9,7 +9,7 @@ export async function GET(
   _request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireUser();
+  const auth = await requireAdmin();
   if ('error' in auth) {
     return auth.error;
   }

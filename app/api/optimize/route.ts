@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { propagateAttributes } from '@langfuse/tracing';
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { requireUser } from '@/lib/auth/require-user';
 import { getConversionMetricsForOptimize } from '@/lib/analytics/metrics';
+import { recordAgentLoopEvent } from '@/lib/clickhouse/agent-loop';
+import { hasLangfuseConfig } from '@/lib/langfuse/client';
+import { flushLangfuseSpans } from '@/lib/langfuse/otel';
+import { traceOptimizeRun } from '@/lib/langfuse/trace-llm';
 import { buildOptimizePrompt } from '@/lib/llm/optimize-prompt';
 import { runOptimizationLLM } from '@/lib/llm/providers';
 import { fetchSeoPromptContext } from '@/lib/seo/prompt-context';
@@ -29,7 +34,20 @@ async function runOptimization(leadId?: string) {
     seoContext: seoContext ?? undefined,
   });
 
-  const decision = await runOptimizationLLM(prompt);
+  const runLlm = () => runOptimizationLLM(prompt);
+
+  const decision =
+    hasLangfuseConfig()
+      ? await propagateAttributes(
+          {
+            traceName: 'synapsecro.optimize',
+            sessionId: leadId ?? 'global',
+            userId: leadId,
+            tags: ['cro', 'optimize'],
+          },
+          runLlm,
+        )
+      : await runLlm();
 
   for (const [key, val] of Object.entries(decision.updates)) {
     if (typeof val !== 'string') continue;
@@ -44,7 +62,36 @@ async function runOptimization(leadId?: string) {
     action_taken: decision.action_taken,
   });
 
-  return decision;
+  void recordAgentLoopEvent({
+    loopType: 'optimize',
+    leadId: leadId ?? null,
+    payload: {
+      thoughtProcess: decision.thought_process,
+      actionTaken: decision.action_taken,
+      updates: decision.updates,
+    },
+    metricsSnapshot: {
+      viewCount,
+      clickCount,
+      conversionRate,
+      seoContextUsed: Boolean(seoContext),
+    },
+  });
+
+  await traceOptimizeRun({
+    leadId,
+    decision,
+    metrics: {
+      viewCount,
+      clickCount,
+      conversionRate,
+      seoContextUsed: Boolean(seoContext),
+    },
+  });
+
+  await flushLangfuseSpans();
+
+  return { decision, seoContextUsed: Boolean(seoContext) };
 }
 
 function errorStatus(message: string): number {
@@ -62,8 +109,12 @@ export async function POST(request: NextRequest) {
 
   try {
     const leadId = request.nextUrl.searchParams.get('leadId') ?? undefined;
-    const decision = await runOptimization(leadId);
-    return NextResponse.json({ success: true, decision, seoContextUsed: Boolean(leadId) });
+    const { decision, seoContextUsed } = await runOptimization(leadId);
+    return NextResponse.json({
+      success: true,
+      decision,
+      seoContextUsed,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Optimization failed';
     const clientMessage =

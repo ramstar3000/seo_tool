@@ -65,8 +65,31 @@ The Docker compose file mounts `docker/clickhouse/users.d/local-default.xml` so 
 
 ## Setup (ClickHouse Cloud free tier)
 
+### Option A — use your Cloud API key (recommended)
+
+If you have **Settings → API Keys** credentials in `.env`:
+
+```bash
+CLICKHOUSE_KEY_ID=...
+CLICKHOUSE_API_KEY=...
+```
+
+Run:
+
+```bash
+npm run clickhouse:cloud-provision
+npm run clickhouse:init
+npm run clickhouse:smoke
+```
+
+This uses the [ClickHouse Cloud API](https://clickhouse.com/docs/cloud/manage/openapi) to find your service, fetch a database password, and write `CLICKHOUSE_URL` + `CLICKHOUSE_PASSWORD` to `.env`. The API key manages infrastructure; the script obtains **database** credentials for `@clickhouse/client`.
+
+To create a new development service if none exists, the npm script passes `--create-if-missing`.
+
+### Option B — manual Connect tab
+
 1. Create a free [ClickHouse Cloud](https://clickhouse.com/cloud) service.
-2. Copy connection details from **Connect → Node.js**.
+2. Copy connection details from **Services → Connect → Node.js**.
 3. Add to `.env.local`:
 
 ```bash
@@ -141,7 +164,28 @@ When any audit completes (`saveAuditToSupabase`), the app dual-writes to `seo_in
 
 Without `CLICKHOUSE_*` env vars, all paths fall back gracefully (Postgres-only audits unchanged).
 
-## Hackathon demo script
+## Hackathon demo script (ClickHouse track)
+
+**Before judging — seed realistic scale + 14-day persistent issues:**
+
+```bash
+npm run clickhouse:init
+npm run clickhouse:seed-demo
+```
+
+This inserts ~200+ hourly analytics events and 3 re-audits for **Camden Smile Dental** with the same 3 critical issues at day 14, 7, and 0 — powering the “issues persisting 14 days” prompt line.
+
+**Judge API (one URL):**
+
+```bash
+curl https://synapsecro.fly.dev/api/clickhouse/showcase | jq
+```
+
+Returns: event scale counts, hourly funnel stats, persistent findings with `daysPersisting`, LLM `promptBlock` preview, and example SQL with “why not Postgres” notes.
+
+**Say this in the pitch:**
+
+> “Postgres stores the audit. ClickHouse remembers *patterns* — which issues survived 3 re-audits, how conversion moved hour-by-hour, and what the rewrite agent should prioritize — in one aggregated prompt block.”
 
 ### Sensory stream (CRO)
 
@@ -158,6 +202,17 @@ Without `CLICKHOUSE_*` env vars, all paths fall back gracefully (Postgres-only a
 3. Open `/dashboard` — **SEO insight memory** section with category breakdown.
 4. Link a GitHub repo and trigger auto-PR — LLM prompt includes historical SEO context from ClickHouse.
 5. Optional: `curl -X POST "http://localhost:3000/api/optimize?leadId=LEAD_UUID" …` — CRO agent sees SEO memory for that lead.
+
+### Langfuse evals (ClickHouse ecosystem)
+
+[Langfuse](https://langfuse.com) is ClickHouse’s LLM observability platform — traces, scores, and eval dashboards on top of ClickHouse.
+
+1. Create a project at [cloud.langfuse.com](https://cloud.langfuse.com) and add `LANGFUSE_PUBLIC_KEY` + `LANGFUSE_SECRET_KEY` to `.env`.
+2. Trigger optimize or run an audit — each run creates a Langfuse trace with scores (`conversion_rate`, `seo_context_used`, `copy_fields_updated`, `finding_count`, etc.).
+3. Open Langfuse → Traces — filter by tag `hackathon` or session `leadId`.
+4. `curl /api/clickhouse/showcase | jq '.langfuse'` — eval aggregates mirrored in `llm_eval_events` for SQL analytics.
+
+**Pitch line:** “ClickHouse stores agent memory; Langfuse traces and scores every rewrite; we mirror evals back into ClickHouse for aggregate dashboards.”
 
 ## Tables
 

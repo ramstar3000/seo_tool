@@ -51,6 +51,7 @@ export async function runOptimizationLLM(prompt: string): Promise<OptimizeDecisi
     system: 'Respond with valid JSON only. Do not include markdown fences or extra commentary.',
     prompt,
     maxOutputTokens: 1024,
+    telemetry: { functionId: 'cro-optimizer' },
   });
 
   return parseOptimizeDecision(extractJsonContent(content));

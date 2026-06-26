@@ -4,6 +4,7 @@ import { getGlobalSpendUsd, getLlmSpendUsd } from '@/lib/cost/tracker';
 import { getGlobalSpendCapUsd, hasClickHouseConfig, hasSupabaseConfig, hasTavilyConfig } from '@/lib/env';
 import { pingClickHouse } from '@/lib/clickhouse/client';
 import { getSeoInsightMetrics } from '@/lib/clickhouse/seo-insights';
+import { hasLangfuseConfig } from '@/lib/langfuse/client';
 import { getActiveLlmProvider, getActiveModelId, isResearchLlmConfigured } from '@/lib/llm/client';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { checkSupabaseSchema } from '@/lib/supabase/schema-health';
@@ -49,6 +50,7 @@ export async function GET() {
       tavily: hasTavilyConfig(),
       clickhouse: clickhouseConfigured,
       clickhouseOk,
+      langfuse: hasLangfuseConfig(),
       seoInsights: seoInsights?.source === 'clickhouse'
         ? {
             auditCount: seoInsights.auditCount,

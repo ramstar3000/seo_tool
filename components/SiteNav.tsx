@@ -4,17 +4,22 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useAuth } from '@/components/AuthProvider';
+import { isAdminEmail } from '@/lib/auth/admin-email';
 import { PageContainer } from '@/components/ui/PageContainer';
 
 const publicLinks = [
   { href: '/', label: 'Home' },
   { href: '/dashboard', label: 'Dashboard' },
-  { href: '/leads', label: 'Leads' },
 ];
 
 const authLinks = [
   { href: '/research', label: 'Research' },
   { href: '/settings/repos', label: 'Repos' },
+];
+
+const adminLinks = [
+  { href: '/leads', label: 'Leads' },
+  { href: '/admin', label: 'Admin' },
 ];
 
 export function SiteNav() {
@@ -23,7 +28,9 @@ export function SiteNav() {
   const { user, isLoading, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const links = user ? [...publicLinks, ...authLinks] : publicLinks;
+  const links = user
+    ? [...publicLinks, ...authLinks, ...(isAdminEmail(user.email) ? adminLinks : [])]
+    : publicLinks;
 
   const handleSignOut = async () => {
     await signOut();

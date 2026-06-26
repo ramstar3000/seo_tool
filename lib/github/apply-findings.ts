@@ -125,6 +125,7 @@ export async function applyFindingsToRepo(params: {
       seoContext,
     }),
     maxOutputTokens: 8192,
+    telemetry: { functionId: 'github-apply-findings' },
   });
 
   const rawChanges = parseChangesJson(textBlock);

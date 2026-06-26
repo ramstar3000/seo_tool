@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { requireUser } from '@/lib/auth/require-user';
+import { requireAdmin } from '@/lib/auth/require-admin';
 import { queueAutoResearchForLeads } from '@/lib/leads/auto-research';
 import { discoverLondonLeads } from '@/lib/leads/discover';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 export async function POST() {
-  const auth = await requireUser();
+  const auth = await requireAdmin();
   if ('error' in auth) {
     return auth.error;
   }
