@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SynapseCRO: AI-Powered Landing Pages for London Local Businesses",
+  title: "SynapseCRO: AI-Powered CRO Landing Pages for London Local Businesses",
   description:
     "SynapseCRO builds AI-powered landing pages to boost leads for London local businesses. Track visitor behavior, clicks, and real-time conversion updates.",
 };
