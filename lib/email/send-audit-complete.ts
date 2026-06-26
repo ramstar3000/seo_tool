@@ -1,3 +1,5 @@
+import { ApiSpendCapExceededError, assertWithinBudget } from '@/lib/cost/check';
+import { recordApiUsage } from '@/lib/cost/tracker';
 import { scoreLabel } from '@/lib/audit/score';
 import {
   groupFindingsByAction,
@@ -32,6 +34,16 @@ export async function sendAuditCompleteEmail(params: SendAuditCompleteParams): P
     .slice(0, 5);
 
   try {
+    await assertWithinBudget('resend');
+  } catch (error) {
+    if (error instanceof ApiSpendCapExceededError) {
+      console.warn('[email] Resend spend cap reached; audit email not sent');
+      return false;
+    }
+    throw error;
+  }
+
+  try {
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -59,6 +71,13 @@ export async function sendAuditCompleteEmail(params: SendAuditCompleteParams): P
       console.error('[email] Resend failed:', response.status, body);
       return false;
     }
+
+    await recordApiUsage({
+      provider: 'resend',
+      operation: 'send_email',
+      units: 1,
+      metadata: { type: 'audit_complete', auditRequestId: params.auditRequestId },
+    });
 
     return true;
   } catch (error) {

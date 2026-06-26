@@ -1,4 +1,6 @@
 import * as cheerio from 'cheerio';
+import { isWithinBudget } from '@/lib/cost/check';
+import { recordApiUsage } from '@/lib/cost/tracker';
 import { getFirecrawlApiKey } from '@/lib/env';
 
 const FETCH_TIMEOUT_MS = 15_000;
@@ -84,6 +86,10 @@ async function fetchWithCheerio(url: string): Promise<FetchPageResult> {
 }
 
 async function fetchWithFirecrawl(url: string, apiKey: string): Promise<FetchPageResult> {
+  if (!(await isWithinBudget('firecrawl'))) {
+    throw new Error('Firecrawl spend cap reached');
+  }
+
   const { default: Firecrawl } = await import('@mendable/firecrawl-js');
   const firecrawl = new Firecrawl({ apiKey });
 
@@ -97,6 +103,13 @@ async function fetchWithFirecrawl(url: string, apiKey: string): Promise<FetchPag
     if (!html) {
       throw new Error('Firecrawl returned no HTML content');
     }
+
+    await recordApiUsage({
+      provider: 'firecrawl',
+      operation: 'scrape',
+      units: 1,
+      metadata: { url },
+    });
 
     return { html, url: result.metadata?.sourceURL ?? url, source: 'firecrawl' };
   } catch (error) {

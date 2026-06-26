@@ -1,4 +1,5 @@
 import { getGitHubToken } from '@/lib/env';
+import { recordApiUsage } from '@/lib/cost/tracker';
 
 const GITHUB_API = 'https://api.github.com';
 
@@ -49,8 +50,23 @@ export async function githubFetch<T = unknown>(
   }
 
   if (response.status === 204) {
+    await recordApiUsage({
+      provider: 'github',
+      operation: 'api_call',
+      units: 1,
+      metadata: { path: path.slice(0, 120), status: 204 },
+    });
     return undefined as T;
   }
 
-  return response.json() as Promise<T>;
+  const json = await response.json();
+
+  await recordApiUsage({
+    provider: 'github',
+    operation: 'api_call',
+    units: 1,
+    metadata: { path: path.slice(0, 120), status: response.status },
+  });
+
+  return json as T;
 }

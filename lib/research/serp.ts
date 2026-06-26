@@ -1,4 +1,6 @@
 import { getTavilyApiKey } from '@/lib/env';
+import { isWithinBudget } from '@/lib/cost/check';
+import { recordApiUsage } from '@/lib/cost/tracker';
 import type { SerpAd, SerpOrganicResult } from '@/lib/research/types';
 
 interface TavilyResult {
@@ -42,6 +44,11 @@ async function fetchTavily(
   const apiKey = getTavilyApiKey();
   if (!apiKey) return null;
 
+  if (!(await isWithinBudget('tavily'))) {
+    console.warn('[serp] Tavily spend cap reached; skipping search');
+    return null;
+  }
+
   const body: Record<string, unknown> = {
     query: buildQuery(query, options.location),
     max_results: Math.min(Math.max(options.num ?? 10, 1), 20),
@@ -66,6 +73,13 @@ async function fetchTavily(
 
     const data = (await response.json()) as TavilySearchResponse & { detail?: string };
     if (data.error || data.detail) return null;
+
+    await recordApiUsage({
+      provider: 'tavily',
+      operation: 'search',
+      units: 1,
+      metadata: { query: buildQuery(query, options.location), search_depth: 'basic' },
+    });
 
     return data;
   } catch {

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { ApiSpendCapExceededError } from '@/lib/cost/check';
 import { sendOutreachEmail } from '@/lib/email/send-outreach-email';
 import { getOutreachTargetEmail } from '@/lib/env';
 import { buildOutreachEmail } from '@/lib/leads/outreach-email';
@@ -76,13 +77,24 @@ export async function sendOutreachForLead(
     ? `[DRAFT: ${lead.business_name}] ${email.subject}`
     : email.subject;
 
-  const sent = await sendOutreachEmail({
-    to: recipient.to,
-    subject,
-    body: email.body,
-    businessName: lead.business_name,
-    testMode: recipient.testMode,
-  });
+  let sent: boolean;
+  try {
+    sent = await sendOutreachEmail({
+      to: recipient.to,
+      subject,
+      body: email.body,
+      businessName: lead.business_name,
+      testMode: recipient.testMode,
+    });
+  } catch (error) {
+    if (error instanceof ApiSpendCapExceededError) {
+      return {
+        success: false,
+        error: `Email send blocked: Resend spend cap reached ($${error.spentUsd.toFixed(2)} / $${error.capUsd.toFixed(2)}).`,
+      };
+    }
+    throw error;
+  }
 
   if (!sent) {
     return {

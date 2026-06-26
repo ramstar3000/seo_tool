@@ -1,4 +1,5 @@
 import { getGooglePageSpeedApiKey } from '@/lib/env';
+import { recordApiUsage } from '@/lib/cost/tracker';
 
 export interface PageSpeedMetrics {
   url: string;
@@ -75,6 +76,13 @@ export async function fetchPageSpeedMetrics(
     }
 
     const data = (await response.json()) as PageSpeedApiResponse;
+
+    await recordApiUsage({
+      provider: 'pagespeed',
+      operation: 'runPagespeed',
+      units: 1,
+      metadata: { url, strategy },
+    });
 
     if (data.error?.message) {
       return {

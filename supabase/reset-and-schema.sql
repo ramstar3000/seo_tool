@@ -23,6 +23,8 @@ drop table if exists public.site_audits cascade;
 drop table if exists public.leads cascade;
 drop table if exists public.lead_discovery_runs cascade;
 drop table if exists public.agent_brain_logs cascade;
+drop table if exists public.api_usage_events cascade;
+drop table if exists public.llm_usage_events cascade;
 drop table if exists public.analytics_events cascade;
 drop table if exists public.site_copy cascade;
 
@@ -51,6 +53,35 @@ create table public.analytics_events (
   event_type text not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- LLM usage tracking (legacy; service-role writes only)
+create table public.llm_usage_events (
+  id uuid primary key default gen_random_uuid(),
+  provider text not null,
+  model text not null,
+  input_tokens int not null default 0,
+  output_tokens int not null default 0,
+  estimated_usd numeric(12, 6) not null default 0,
+  created_at timestamptz default now()
+);
+
+create index llm_usage_events_created_at_idx on public.llm_usage_events (created_at desc);
+
+-- Unified API usage tracking (all paid external APIs; service-role writes only)
+create table public.api_usage_events (
+  id uuid primary key default gen_random_uuid(),
+  provider text not null,
+  operation text not null,
+  units numeric(12, 4) not null default 1,
+  input_tokens int not null default 0,
+  output_tokens int not null default 0,
+  estimated_usd numeric(12, 6) not null default 0,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz default now()
+);
+
+create index api_usage_events_created_at_idx on public.api_usage_events (created_at desc);
+create index api_usage_events_provider_idx on public.api_usage_events (provider);
 
 -- 3. Agent Cognitive Log (Dashboard Stream)
 create table public.agent_brain_logs (
@@ -226,6 +257,8 @@ alter table public.audit_social_profiles enable row level security;
 alter table public.linked_repositories enable row level security;
 alter table public.repo_change_runs enable row level security;
 alter table public.audit_requests enable row level security;
+alter table public.llm_usage_events enable row level security;
+alter table public.api_usage_events enable row level security;
 
 create policy "Public read site_copy"
   on public.site_copy for select
