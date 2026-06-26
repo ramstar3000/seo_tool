@@ -36,23 +36,29 @@ export function buildCroOptimizerPrompt(params: {
   const rateNum = Number.parseFloat(conversionRate);
   const belowTarget = Number.isFinite(rateNum) && rateNum < 10;
 
-  const copyById =
-    currentCopy && typeof currentCopy === 'object' && !Array.isArray(currentCopy)
-      ? (currentCopy as Record<string, { id?: string; text_content?: string } | string>)
-      : {};
+  const copyById: Record<string, string> = {};
+  if (Array.isArray(currentCopy)) {
+    for (const row of currentCopy) {
+      if (row && typeof row === 'object' && 'id' in row && 'text_content' in row) {
+        const { id, text_content } = row as { id: string; text_content: string };
+        if (typeof id === 'string' && typeof text_content === 'string') {
+          copyById[id] = text_content;
+        }
+      }
+    }
+  } else if (currentCopy && typeof currentCopy === 'object') {
+    for (const [id, val] of Object.entries(currentCopy as Record<string, unknown>)) {
+      if (typeof val === 'string') copyById[id] = val;
+      else if (val && typeof val === 'object' && 'text_content' in val) {
+        const text = (val as { text_content?: string }).text_content;
+        if (typeof text === 'string') copyById[id] = text;
+      }
+    }
+  }
 
-  const heroTitle =
-    typeof copyById.hero_title === 'string'
-      ? copyById.hero_title
-      : copyById.hero_title?.text_content ?? '';
-  const heroSubtitle =
-    typeof copyById.hero_subtitle === 'string'
-      ? copyById.hero_subtitle
-      : copyById.hero_subtitle?.text_content ?? '';
-  const ctaText =
-    typeof copyById.cta_text === 'string'
-      ? copyById.cta_text
-      : copyById.cta_text?.text_content ?? '';
+  const heroTitle = copyById.hero_title ?? '';
+  const heroSubtitle = copyById.hero_subtitle ?? '';
+  const ctaText = copyById.cta_text ?? '';
 
   const seoBlock = params.seoContext?.trim()
     ? `
