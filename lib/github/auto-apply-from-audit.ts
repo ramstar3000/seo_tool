@@ -4,6 +4,7 @@ import { isGitHubConfigured } from '@/lib/github/client';
 import { createPullRequestFromChanges } from '@/lib/github/create-pr';
 import type { AuditFindingInput, LinkedRepository } from '@/lib/github/types';
 import { notifySlack } from '@/lib/notifications/slack';
+import { fetchSeoPromptContext } from '@/lib/seo/prompt-context';
 
 const RECENT_FAILED_WINDOW_MS = 60 * 60 * 1000;
 
@@ -70,6 +71,7 @@ async function executeRepoChangeRun(
   supabase: SupabaseClient,
   repo: LinkedRepository,
   auditId: string,
+  leadId: string,
   auditRow: { business_name: string; keyword: string; summary: string | null },
   findings: AuditFindingInput[]
 ): Promise<AutoApplyResult> {
@@ -103,6 +105,8 @@ async function executeRepoChangeRun(
   const changeRunId = changeRun.id as string;
 
   try {
+    const seoContext = await fetchSeoPromptContext({ leadId, auditId });
+
     const { changes, summary } = await applyFindingsToRepo({
       owner: repo.github_owner,
       repo: repo.github_repo,
@@ -111,6 +115,7 @@ async function executeRepoChangeRun(
       businessName: auditRow.business_name,
       keyword: auditRow.keyword,
       findings,
+      seoContext: seoContext ?? undefined,
     });
 
     const prTitle = `SynapseCRO: SEO/CRO improvements for ${auditRow.business_name}`;
@@ -246,6 +251,7 @@ export async function autoApplyFromAudit(params: {
       supabase,
       repo,
       auditId,
+      leadId,
       {
         business_name: auditRow.business_name as string,
         keyword: auditRow.keyword as string,

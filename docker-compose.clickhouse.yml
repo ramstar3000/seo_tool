@@ -1,0 +1,25 @@
+# Local ClickHouse for SynapseCRO dev (free, no cloud credentials).
+# HTTP: http://localhost:8123  |  Native: localhost:9000
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: synapsecro-clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./docker/clickhouse/users.d/local-default.xml:/etc/clickhouse-server/users.d/local-default.xml:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8123/ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  clickhouse_data:

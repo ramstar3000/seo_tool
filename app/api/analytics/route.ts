@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { recordAnalyticsEvent } from '@/lib/clickhouse/events';
 import {
   checkRateLimit,
   getClientIp,
@@ -11,6 +12,7 @@ export const runtime = 'nodejs';
 
 const analyticsBodySchema = z.object({
   event_type: z.enum(['page_view', 'cta_click']),
+  path: z.string().max(500).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -33,6 +35,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
+  const referrer = request.headers.get('referer') ?? '';
+  const userAgent = request.headers.get('user-agent') ?? '';
+
   const { error } = await supabase.from('analytics_events').insert({
     event_type: body.event_type,
   });
@@ -40,6 +45,13 @@ export async function POST(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: 'Failed to record event' }, { status: 500 });
   }
+
+  void recordAnalyticsEvent({
+    eventType: body.event_type,
+    path: body.path ?? '/',
+    referrer,
+    userAgent,
+  });
 
   return NextResponse.json({ success: true });
 }

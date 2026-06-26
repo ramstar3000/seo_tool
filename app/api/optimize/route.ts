@@ -1,30 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
 import { requireUser } from '@/lib/auth/require-user';
+import { getConversionMetricsForOptimize } from '@/lib/analytics/metrics';
 import { buildOptimizePrompt } from '@/lib/llm/optimize-prompt';
 import { runOptimizationLLM } from '@/lib/llm/providers';
+import { fetchSeoPromptContext } from '@/lib/seo/prompt-context';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
 
-async function runOptimization() {
+async function runOptimization(leadId?: string) {
   const supabase = getSupabaseAdmin();
   if (!supabase) {
     throw new Error('Supabase not configured');
   }
 
-  const { data: events } = await supabase.from('analytics_events').select('event_type');
-  const clickCount = events?.filter((e) => e.event_type === 'cta_click').length || 0;
-  const viewCount = events?.filter((e) => e.event_type === 'page_view').length || 1;
-  const conversionRate = ((clickCount / viewCount) * 100).toFixed(1);
+  const { viewCount, clickCount, conversionRate } = await getConversionMetricsForOptimize();
 
   const { data: currentCopy } = await supabase.from('site_copy').select('*');
+
+  const seoContext = leadId ? await fetchSeoPromptContext({ leadId }) : null;
 
   const prompt = buildOptimizePrompt({
     viewCount,
     clickCount,
     conversionRate,
     currentCopy,
+    seoContext: seoContext ?? undefined,
   });
 
   const decision = await runOptimizationLLM(prompt);
@@ -59,8 +61,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const decision = await runOptimization();
-    return NextResponse.json({ success: true, decision });
+    const leadId = request.nextUrl.searchParams.get('leadId') ?? undefined;
+    const decision = await runOptimization(leadId);
+    return NextResponse.json({ success: true, decision, seoContextUsed: Boolean(leadId) });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Optimization failed';
     const clientMessage =

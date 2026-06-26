@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { recordAuditInsights } from '@/lib/clickhouse/seo-insights';
 import { extractPageSpeedFromTrace } from '@/lib/research/pagespeed';
 import type {
   AuditCompetitor,
@@ -100,6 +101,25 @@ export async function saveAuditToSupabase(
     );
     if (error) throw new Error(error.message);
   }
+
+  let rankPosition: number | null = null;
+  if (audit.lead_id) {
+    const { data: leadRow } = await supabase
+      .from('leads')
+      .select('rank_position')
+      .eq('id', audit.lead_id)
+      .maybeSingle();
+    if (leadRow?.rank_position != null) {
+      rankPosition = Number(leadRow.rank_position);
+    }
+  }
+
+  void recordAuditInsights({
+    auditId,
+    audit,
+    findings,
+    rankPosition,
+  });
 
   return { auditId };
 }

@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getLlmSpendCapUsd } from '@/lib/cost/limits';
 import { getGlobalSpendUsd, getLlmSpendUsd } from '@/lib/cost/tracker';
+import { getGlobalSpendCapUsd, hasClickHouseConfig, hasSupabaseConfig, hasTavilyConfig } from '@/lib/env';
+import { pingClickHouse } from '@/lib/clickhouse/client';
+import { getSeoInsightMetrics } from '@/lib/clickhouse/seo-insights';
 import { getActiveLlmProvider, getActiveModelId, isResearchLlmConfigured } from '@/lib/llm/client';
-import { getGlobalSpendCapUsd, hasSupabaseConfig, hasTavilyConfig } from '@/lib/env';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { checkSupabaseSchema } from '@/lib/supabase/schema-health';
 
@@ -18,6 +20,9 @@ export async function GET() {
     : null;
   const globalSpendUsd = Math.round((await getGlobalSpendUsd()) * 1e4) / 1e4;
   const globalCapUsd = getGlobalSpendCapUsd();
+  const clickhouseConfigured = hasClickHouseConfig();
+  const clickhouseOk = clickhouseConfigured ? await pingClickHouse() : null;
+  const seoInsights = clickhouseConfigured ? await getSeoInsightMetrics({ days: 30 }) : null;
 
   let schemaOk: boolean | null = null;
   let missingTables: string[] = [];
@@ -42,6 +47,14 @@ export async function GET() {
       llmSpendUsd,
       llmSpendCapUsd: llmConfigured ? llmSpendCapUsd : null,
       tavily: hasTavilyConfig(),
+      clickhouse: clickhouseConfigured,
+      clickhouseOk,
+      seoInsights: seoInsights?.source === 'clickhouse'
+        ? {
+            auditCount: seoInsights.auditCount,
+            findingCount: seoInsights.findingCount,
+          }
+        : null,
       cost: {
         spendUsd: globalSpendUsd,
         capUsd: globalCapUsd,

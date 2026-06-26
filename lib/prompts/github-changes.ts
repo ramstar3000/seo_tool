@@ -19,8 +19,9 @@ export function buildGitHubChangesUserPrompt(params: {
   keyword: string;
   findings: Array<{ severity: string; category: string; title: string; description: string }>;
   files: Array<{ path: string; content: string }>;
+  seoContext?: string;
 }): string {
-  const { businessName, keyword, findings, files } = params;
+  const { businessName, keyword, findings, files, seoContext } = params;
 
   const findingsBlock =
     findings.length > 0
@@ -36,9 +37,13 @@ export function buildGitHubChangesUserPrompt(params: {
           .join('\n\n')
       : 'No file contents provided.';
 
+  const seoBlock = seoContext?.trim()
+    ? `\n\nHistorical SEO context (prior audits):\n${seoContext.trim()}\n`
+    : '';
+
   return `Business: ${businessName}
 Target keyword: ${keyword}
-
+${seoBlock}
 Audit findings to address:
 ${findingsBlock}
 

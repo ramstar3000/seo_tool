@@ -57,7 +57,7 @@ async function trackAnalytics(eventType: 'page_view' | 'cta_click'): Promise<voi
     await fetch('/api/analytics', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event_type: eventType }),
+      body: JSON.stringify({ event_type: eventType, path: window.location.pathname }),
     });
   } catch {
     // Non-blocking

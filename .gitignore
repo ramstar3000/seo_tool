@@ -37,6 +37,9 @@ yarn-error.log*
 # local tooling
 .graphcoder/
 
+# lead discovery exports (scripts/find-leads.mjs)
+/scripts/out/
+
 # vercel
 .vercel
 .fly-cron-secret.local

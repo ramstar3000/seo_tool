@@ -6,8 +6,13 @@ export function buildCroOptimizerPrompt(params: {
   clickCount: number;
   conversionRate: string;
   currentCopy: unknown;
+  seoContext?: string;
 }): string {
-  const { viewCount, clickCount, conversionRate, currentCopy } = params;
+  const { viewCount, clickCount, conversionRate, currentCopy, seoContext } = params;
+
+  const seoBlock = seoContext?.trim()
+    ? `\n      SEO insight memory (prior audits for linked lead):\n      ${seoContext.trim()}\n`
+    : '';
 
   return `
       You improve landing page copy for a local business website (trades, clinics, shops, services).
@@ -16,7 +21,7 @@ export function buildCroOptimizerPrompt(params: {
       - Total Page Views: ${viewCount}
       - Total CTA Clicks: ${clickCount}
       - Conversion Rate: ${conversionRate}%
-
+${seoBlock}
       Current Copy:
       ${JSON.stringify(currentCopy)}
 

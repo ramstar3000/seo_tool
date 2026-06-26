@@ -3,7 +3,7 @@
 ### 📌 Hackathon Submission
 * **Event:** Cursor Hands-Off Hackathon — London
 * **Core Concept:** Utilizing basic neuroscience loops (Sensory Input ➔ Cognitive Evaluation ➔ Motor Execution) to build a web page that optimizes its own conversion and search visibility in real-time completely hands-off.
-* **Stack:** Next.js (App Router), Supabase (Realtime Engine), Vercel Edge, Tailwind CSS, Anthropic `claude-3-5-haiku`.
+* **Stack:** Next.js (App Router), Supabase (Realtime Engine), **ClickHouse** (conversion analytics + SEO insight memory), Vercel Edge, Tailwind CSS, Anthropic `claude-3-5-haiku`.
 
 ---
 
@@ -15,7 +15,10 @@ Traditional landing pages are static. If a value proposition fails to connect wi
 ```
    [SENSORY INPUT]              [COGNITIVE CORE]            [MOTOR EXECUTION]
 User Traffic & Clicks   ───>   LLM Evaluation Loop   ───>   Real-time Database Row
-(analytics_events)             (api/optimize route)          Rewrite (site_copy)
+(ClickHouse + PG)               (api/optimize route)          Rewrite (site_copy)
+        │                            ▲
+SEO Audit Findings     ───>   ClickHouse memory      ───>   GitHub PR / copy prompts
+(seo_insight_events)         (recurring issues)
 ▲                                                              │
 └─────────────────── Live DOM Updates via ─────────────────────┘
 Supabase Realtime Engine

@@ -4,6 +4,7 @@ import { applyFindingsToRepo } from '@/lib/github/apply-findings';
 import { isGitHubConfigured } from '@/lib/github/client';
 import { createPullRequestFromChanges } from '@/lib/github/create-pr';
 import type { AuditFindingInput, LinkedRepository } from '@/lib/github/types';
+import { fetchSeoPromptContext } from '@/lib/seo/prompt-context';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
@@ -117,6 +118,10 @@ export async function POST(
   const changeRunId = changeRun.id as string;
 
   try {
+    const seoContext = repo.lead_id
+      ? await fetchSeoPromptContext({ leadId: repo.lead_id, auditId })
+      : await fetchSeoPromptContext({ auditId });
+
     const { changes, summary } = await applyFindingsToRepo({
       owner: repo.github_owner,
       repo: repo.github_repo,
@@ -125,6 +130,7 @@ export async function POST(
       businessName: auditRow.business_name as string,
       keyword: auditRow.keyword as string,
       findings,
+      seoContext: seoContext ?? undefined,
     });
 
     const prTitle = `SynapseCRO: SEO/CRO improvements for ${auditRow.business_name}`;

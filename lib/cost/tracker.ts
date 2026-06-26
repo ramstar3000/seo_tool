@@ -12,6 +12,7 @@ import type {
   RecordApiUsageParams,
 } from '@/lib/cost/types';
 import { API_PROVIDERS } from '@/lib/cost/types';
+import { recordApiUsageInClickHouse } from '@/lib/clickhouse/usage';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 const LLM_PROVIDERS: ApiProvider[] = ['gemini', 'anthropic'];
@@ -118,6 +119,8 @@ export async function recordApiUsage(params: RecordApiUsageParams): Promise<void
     }
     console.error('[cost] failed to record usage:', error.message);
   }
+
+  void recordApiUsageInClickHouse({ ...params, estimatedUsd });
 }
 
 export async function getProviderSpendUsd(provider: ApiProvider): Promise<number> {

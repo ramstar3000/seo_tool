@@ -61,6 +61,11 @@ Optional — ClickHouse (see docs/CLICKHOUSE.md):
   CLICKHOUSE_DATABASE            Database name (default: default)
   Enables: conversion funnel, SEO insight memory, prompt context for GitHub PRs
 
+Local dev (no cloud creds):
+  npm run clickhouse:up      Start ClickHouse in Docker (http://localhost:8123)
+  npm run clickhouse:smoke   Init tables + insert/query smoke test (no Next.js)
+  npm run clickhouse:down    Stop local ClickHouse container
+
 Optional — reserved for future enrichment:
   GOOGLE_PLACES_API_KEY          Google Places API (not wired yet)
 

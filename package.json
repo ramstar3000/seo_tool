@@ -8,12 +8,17 @@
     "start": "next start",
     "lint": "eslint",
     "test:resend": "node scripts/test-resend.mjs",
-    "deploy:fly": "bash scripts/fly-deploy.sh"
+    "clickhouse:init": "node scripts/clickhouse-init.mjs",
+    "deploy:fly": "bash scripts/fly-deploy.sh",
+    "clickhouse:up": "docker compose -f docker-compose.clickhouse.yml up -d",
+    "clickhouse:down": "docker compose -f docker-compose.clickhouse.yml down",
+    "clickhouse:smoke": "node scripts/smoke-clickhouse.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.0",
     "@ai-sdk/google": "^4.0.0",
     "@anthropic-ai/sdk": "^0.106.0",
+    "@clickhouse/client": "^1.22.0",
     "@mendable/firecrawl-js": "^4.28.3",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",

@@ -93,8 +93,10 @@ export async function applyFindingsToRepo(params: {
   businessName: string;
   keyword: string;
   findings: AuditFindingInput[];
+  seoContext?: string;
 }): Promise<{ changes: FileChange[]; summary: string }> {
-  const { owner, repo, defaultBranch, contentPaths, businessName, keyword, findings } = params;
+  const { owner, repo, defaultBranch, contentPaths, businessName, keyword, findings, seoContext } =
+    params;
 
   const treePaths = await fetchRepoTree(owner, repo, defaultBranch);
   const candidatePaths = pickCandidatePaths(treePaths, contentPaths, MAX_FILES_PER_PR * 2);
@@ -120,6 +122,7 @@ export async function applyFindingsToRepo(params: {
       keyword,
       findings,
       files: fileContents,
+      seoContext,
     }),
     maxOutputTokens: 8192,
   });
