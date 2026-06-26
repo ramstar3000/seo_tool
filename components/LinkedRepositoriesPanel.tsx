@@ -195,9 +195,11 @@ export function LinkedRepositoriesPanel({
 
       {githubConfigured === false && (
         <p className="text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
-          <span className="font-medium">GITHUB_TOKEN not configured.</span> Add a Personal Access Token with{' '}
-          <code className="text-amber-200">repo</code> scope to <code className="text-amber-200">.env.local</code>{' '}
-          to create pull requests. Linking repos still works for demo.
+          <span className="font-medium">GitHub not connected.</span> Install the SynapseCRO GitHub App from{' '}
+          <a href="/settings/repos" className="text-amber-200 underline hover:text-amber-100">
+            Settings → Repos
+          </a>{' '}
+          or ask an admin to set <code className="text-amber-200">GITHUB_TOKEN</code> for local dev.
         </p>
       )}
 

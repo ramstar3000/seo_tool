@@ -1,4 +1,5 @@
 import { getGitHubToken } from '@/lib/env';
+import { getInstallationToken, hasGitHubAppConfig } from '@/lib/github/app-auth';
 import { recordApiUsage } from '@/lib/cost/tracker';
 
 const GITHUB_API = 'https://api.github.com';
@@ -14,29 +15,51 @@ export class GitHubApiError extends Error {
   }
 }
 
+export type GitHubFetchOptions = RequestInit & {
+  /** Explicit bearer token (installation token or PAT). */
+  token?: string;
+  /** Resolve token via GitHub App installation (overridden by `token`). */
+  installationId?: number;
+};
+
 export function isGitHubConfigured(): boolean {
-  return Boolean(getGitHubToken());
+  return Boolean(getGitHubToken()) || hasGitHubAppConfig();
+}
+
+async function resolveFetchToken(options: GitHubFetchOptions): Promise<string> {
+  if (options.token) {
+    return options.token;
+  }
+
+  if (options.installationId) {
+    return getInstallationToken(options.installationId);
+  }
+
+  const pat = getGitHubToken();
+  if (pat) {
+    return pat;
+  }
+
+  throw new Error('GitHub is not configured (no PAT or installation token)');
 }
 
 export async function githubFetch<T = unknown>(
   path: string,
-  options: RequestInit = {}
+  options: GitHubFetchOptions = {}
 ): Promise<T> {
-  const token = getGitHubToken();
-  if (!token) {
-    throw new Error('GITHUB_TOKEN is not configured');
-  }
+  const { token: _token, installationId: _installationId, ...fetchOptions } = options;
+  const token = await resolveFetchToken(options);
 
   const url = path.startsWith('http') ? path : `${GITHUB_API}${path.startsWith('/') ? path : `/${path}`}`;
 
   const response = await fetch(url, {
-    ...options,
+    ...fetchOptions,
     headers: {
       Accept: 'application/vnd.github+json',
       Authorization: `Bearer ${token}`,
       'X-GitHub-Api-Version': '2022-11-28',
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      ...options.headers,
+      ...(fetchOptions.body ? { 'Content-Type': 'application/json' } : {}),
+      ...fetchOptions.headers,
     },
   });
 

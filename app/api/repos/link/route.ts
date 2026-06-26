@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/auth/require-user';
 import { githubFetch, isGitHubConfigured } from '@/lib/github/client';
+import { getInstallationForUser } from '@/lib/github/installations';
 import { parseRepoUrl } from '@/lib/github/parse-repo-url';
+import { isGitHubAuthAvailable } from '@/lib/github/resolve-auth';
 import type { LinkedRepository } from '@/lib/github/types';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
@@ -46,10 +48,16 @@ export async function POST(request: NextRequest) {
 
   let resolvedBranch = defaultBranch ?? 'main';
 
+  const userInstallation = await getInstallationForUser(auth.user.id);
+  const githubAuthOpts = userInstallation
+    ? { installationId: userInstallation.installation_id }
+    : {};
+
   if (isGitHubConfigured()) {
     try {
       const repoMeta = await githubFetch<{ default_branch: string }>(
-        `/repos/${parsed.owner}/${parsed.repo}`
+        `/repos/${parsed.owner}/${parsed.repo}`,
+        githubAuthOpts
       );
       resolvedBranch = defaultBranch ?? repoMeta.default_branch ?? 'main';
     } catch {
@@ -69,6 +77,7 @@ export async function POST(request: NextRequest) {
       repo_url: parsed.repoUrl,
       content_paths: contentPaths ?? [],
       user_id: auth.user.id,
+      installation_id: userInstallation?.installation_id ?? null,
     })
     .select('*')
     .single();
@@ -87,8 +96,12 @@ export async function POST(request: NextRequest) {
     default_branch: (data.default_branch as string) ?? 'main',
     repo_url: data.repo_url as string,
     content_paths: Array.isArray(data.content_paths) ? (data.content_paths as string[]) : [],
+    installation_id: (data.installation_id as number | null) ?? null,
     created_at: data.created_at as string,
   };
 
-  return NextResponse.json({ repo, githubConfigured: isGitHubConfigured() });
+  return NextResponse.json({
+    repo,
+    githubConfigured: await isGitHubAuthAvailable(auth.user.id),
+  });
 }

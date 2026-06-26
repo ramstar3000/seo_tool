@@ -14,7 +14,14 @@ export interface LinkedRepository {
   default_branch: string;
   repo_url: string;
   content_paths: string[];
+  installation_id?: number | null;
   created_at: string;
+}
+
+export interface GitHubInstallationSummary {
+  installation_id: number;
+  account_login: string;
+  account_type: 'User' | 'Organization';
 }
 
 export interface RepoChangeRun {

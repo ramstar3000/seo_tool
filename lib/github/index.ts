@@ -2,7 +2,16 @@ export {
   GitHubApiError,
   githubFetch,
   isGitHubConfigured,
+  type GitHubFetchOptions,
 } from '@/lib/github/client';
+export { hasGitHubAppConfig, getInstallationToken } from '@/lib/github/app-auth';
+export {
+  getInstallationForUser,
+  saveInstallation,
+  deleteInstallation,
+  listInstallationRepos,
+} from '@/lib/github/installations';
+export { resolveGitHubAuth, isGitHubAuthAvailable, isGitHubServerConfigured } from '@/lib/github/resolve-auth';
 export { parseRepoUrl } from '@/lib/github/parse-repo-url';
 export { applyFindingsToRepo } from '@/lib/github/apply-findings';
 export { autoApplyFromAudit } from '@/lib/github/auto-apply-from-audit';
@@ -21,4 +30,5 @@ export type {
   RepoChangeRun,
   FileChange,
   AuditFindingInput,
+  GitHubInstallationSummary,
 } from '@/lib/github/types';

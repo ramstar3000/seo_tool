@@ -59,6 +59,26 @@ export function getGitHubToken(): string | undefined {
   return process.env.GITHUB_TOKEN;
 }
 
+export function getGitHubAppId(): string | undefined {
+  return process.env.GITHUB_APP_ID?.trim() || undefined;
+}
+
+export function getGitHubAppPrivateKey(): string | undefined {
+  return process.env.GITHUB_APP_PRIVATE_KEY?.trim() || undefined;
+}
+
+export function getGitHubAppSlug(): string | undefined {
+  return process.env.GITHUB_APP_SLUG?.trim() || undefined;
+}
+
+export function getGitHubAppWebhookSecret(): string | undefined {
+  return process.env.GITHUB_APP_WEBHOOK_SECRET?.trim() || undefined;
+}
+
+export function hasGitHubAppConfig(): boolean {
+  return Boolean(getGitHubAppId() && getGitHubAppPrivateKey() && getGitHubAppSlug());
+}
+
 /** "owner/name" of this app's own repo — target for prompt self-improvement PRs. */
 export function getAppGitHubRepo(): string | undefined {
   return process.env.APP_GITHUB_REPO?.trim() || undefined;

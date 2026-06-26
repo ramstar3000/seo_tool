@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { applyFindingsToRepo } from '@/lib/github/apply-findings';
-import { isGitHubConfigured } from '@/lib/github/client';
 import { createPullRequestFromChanges } from '@/lib/github/create-pr';
+import { resolveGitHubAuth, isGitHubServerConfigured } from '@/lib/github/resolve-auth';
 import type { AuditFindingInput, LinkedRepository } from '@/lib/github/types';
 import { flushLangfuseSpans } from '@/lib/langfuse/otel';
 import { traceAutoPrRun } from '@/lib/langfuse/trace-llm';
@@ -21,7 +21,7 @@ export interface AutoApplyResult {
   reason?: string;
 }
 
-function mapLinkedRepository(row: Record<string, unknown>): LinkedRepository {
+function mapLinkedRepository(row: Record<string, unknown>): LinkedRepository & { user_id: string | null } {
   return {
     id: row.id as string,
     lead_id: (row.lead_id as string | null) ?? null,
@@ -32,7 +32,9 @@ function mapLinkedRepository(row: Record<string, unknown>): LinkedRepository {
     default_branch: (row.default_branch as string) ?? 'main',
     repo_url: row.repo_url as string,
     content_paths: Array.isArray(row.content_paths) ? (row.content_paths as string[]) : [],
+    installation_id: (row.installation_id as number | null) ?? null,
     created_at: row.created_at as string,
+    user_id: (row.user_id as string | null) ?? null,
   };
 }
 
@@ -72,7 +74,7 @@ async function hasRecentRun(
 
 async function executeRepoChangeRun(
   supabase: SupabaseClient,
-  repo: LinkedRepository,
+  repo: LinkedRepository & { user_id: string | null },
   auditId: string,
   leadId: string,
   auditRow: { business_name: string; keyword: string; summary: string | null },
@@ -107,6 +109,25 @@ async function executeRepoChangeRun(
 
   const changeRunId = changeRun.id as string;
 
+  const githubAuth = repo.user_id
+    ? await resolveGitHubAuth(repo.user_id, repo.installation_id ?? null)
+    : await resolveGitHubAuth('', repo.installation_id ?? null);
+
+  if (!githubAuth) {
+    const error = 'GitHub credentials not available for this repository';
+    await supabase
+      .from('repo_change_runs')
+      .update({ status: 'failed', error_message: error })
+      .eq('id', changeRunId);
+
+    return {
+      repositoryId: repo.id,
+      changeRunId,
+      status: 'failed',
+      error,
+    };
+  }
+
   try {
     const seoContext = await fetchSeoPromptContext({ leadId, auditId });
 
@@ -119,6 +140,7 @@ async function executeRepoChangeRun(
       keyword: auditRow.keyword,
       findings,
       seoContext: seoContext ?? undefined,
+      githubAuth,
     });
 
     const prTitle = `SynapseCRO: SEO/CRO improvements for ${auditRow.business_name}`;
@@ -142,6 +164,7 @@ async function executeRepoChangeRun(
       changes,
       prTitle,
       prBody,
+      githubAuth,
     });
 
     await supabase
@@ -187,7 +210,7 @@ async function executeRepoChangeRun(
 async function findLinkedReposForLead(
   supabase: SupabaseClient,
   leadId: string
-): Promise<LinkedRepository[]> {
+): Promise<Array<LinkedRepository & { user_id: string | null }>> {
   const { data, error } = await supabase
     .from('linked_repositories')
     .select('*')
@@ -211,7 +234,7 @@ export async function autoApplyFromAudit(params: {
 }): Promise<AutoApplyResult[]> {
   const { supabase, auditId, leadId } = params;
 
-  if (!isGitHubConfigured()) {
+  if (!isGitHubServerConfigured()) {
     return [];
   }
 

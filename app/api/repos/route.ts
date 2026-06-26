@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/auth/require-user';
-import { isGitHubConfigured } from '@/lib/github/client';
-import type { LinkedRepository } from '@/lib/github/types';
+import { getInstallationForUser } from '@/lib/github/installations';
+import { isGitHubAuthAvailable } from '@/lib/github/resolve-auth';
+import { hasGitHubAppConfig } from '@/lib/env';
+import type { GitHubInstallationSummary, LinkedRepository } from '@/lib/github/types';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
@@ -17,6 +19,7 @@ function mapRepo(row: Record<string, unknown>): LinkedRepository {
     default_branch: (row.default_branch as string) ?? 'main',
     repo_url: row.repo_url as string,
     content_paths: Array.isArray(row.content_paths) ? (row.content_paths as string[]) : [],
+    installation_id: (row.installation_id as number | null) ?? null,
     created_at: row.created_at as string,
   };
 }
@@ -54,8 +57,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  const installation = await getInstallationForUser(auth.user.id);
+  const githubInstallation: GitHubInstallationSummary | null = installation
+    ? {
+        installation_id: installation.installation_id,
+        account_login: installation.account_login,
+        account_type: installation.account_type,
+      }
+    : null;
+
   return NextResponse.json({
     repos: (data ?? []).map(mapRepo),
-    githubConfigured: isGitHubConfigured(),
+    githubConfigured: await isGitHubAuthAvailable(auth.user.id),
+    githubAppConfigured: hasGitHubAppConfig(),
+    githubInstallation,
+    /** @deprecated use githubConfigured — kept for older clients */
+    patConfigured: Boolean(process.env.GITHUB_TOKEN),
   });
 }

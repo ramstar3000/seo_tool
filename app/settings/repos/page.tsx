@@ -3,13 +3,31 @@
 import { useEffect, useState } from 'react';
 import { LinkedRepositoriesPanel } from '@/components/LinkedRepositoriesPanel';
 import { PageContainer, SurfaceCard } from '@/components/ui/PageContainer';
-import type { LinkedRepository } from '@/lib/github/types';
+import type { GitHubInstallationSummary, LinkedRepository } from '@/lib/github/types';
 
 export default function SettingsReposPage() {
   const [repos, setRepos] = useState<LinkedRepository[]>([]);
   const [githubConfigured, setGithubConfigured] = useState<boolean | null>(null);
+  const [githubAppConfigured, setGithubAppConfigured] = useState<boolean>(false);
+  const [githubInstallation, setGithubInstallation] = useState<GitHubInstallationSummary | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [connectStatus, setConnectStatus] = useState<{
+    connected: boolean;
+    error: string | null;
+    pending: boolean;
+  }>({ connected: false, error: null, pending: false });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setConnectStatus({
+      connected: params.get('connected') === '1',
+      error: params.get('error'),
+      pending: params.get('pending') === '1',
+    });
+  }, []);
 
   useEffect(() => {
     void (async () => {
@@ -22,9 +40,13 @@ export default function SettingsReposPage() {
         const body = (await response.json()) as {
           repos: LinkedRepository[];
           githubConfigured: boolean;
+          githubAppConfigured?: boolean;
+          githubInstallation?: GitHubInstallationSummary | null;
         };
         setRepos(body.repos);
         setGithubConfigured(body.githubConfigured);
+        setGithubAppConfigured(Boolean(body.githubAppConfigured));
+        setGithubInstallation(body.githubInstallation ?? null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load repositories');
       } finally {
@@ -83,12 +105,67 @@ export default function SettingsReposPage() {
           </p>
         </SurfaceCard>
 
-        {githubConfigured === false && (
-          <p className="text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3">
-            Set <code className="text-amber-200">GITHUB_TOKEN</code> in <code className="text-amber-200">.env.local</code>{' '}
-            (PAT with repo scope) to create pull requests.
-          </p>
-        )}
+        <SurfaceCard className="p-5 sm:p-6 space-y-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <h2 className="text-base font-semibold text-white">GitHub connection</h2>
+              <p className="text-sm text-zinc-400">
+                Install the SynapseCRO GitHub App to open fix PRs with your own quota. A shared{' '}
+                <code className="text-zinc-300">GITHUB_TOKEN</code> still works as a fallback for local dev.
+              </p>
+            </div>
+            {githubAppConfigured && !githubInstallation && (
+              <a
+                href="/api/github/install"
+                className="inline-flex min-h-10 items-center px-4 rounded-xl bg-teal-500/15 border border-teal-500/30 text-sm font-medium text-teal-300 hover:bg-teal-500/25"
+              >
+                Connect GitHub App
+              </a>
+            )}
+          </div>
+
+          {connectStatus.connected && githubInstallation && (
+            <p className="text-sm text-teal-300 bg-teal-500/10 border border-teal-500/30 rounded-xl px-4 py-3">
+              Connected to GitHub as{' '}
+              <span className="font-medium">{githubInstallation.account_login}</span> (
+              {githubInstallation.account_type}).
+            </p>
+          )}
+
+          {connectStatus.pending && (
+            <p className="text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3">
+              GitHub install is pending approval. Complete the flow on GitHub, then return here.
+            </p>
+          )}
+
+          {connectStatus.error && (
+            <p className="text-sm text-red-300 bg-red-500/10 border border-red-500/25 rounded-xl px-4 py-3">
+              GitHub connection failed: {connectStatus.error}
+            </p>
+          )}
+
+          {!githubAppConfigured && githubConfigured === false && (
+            <p className="text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3">
+              Set <code className="text-amber-200">GITHUB_APP_*</code> env vars (see{' '}
+              <code className="text-amber-200">docs/GITHUB_APP_SETUP.md</code>) or add a{' '}
+              <code className="text-amber-200">GITHUB_TOKEN</code> PAT to enable PR creation.
+            </p>
+          )}
+
+          {githubInstallation && !connectStatus.connected && (
+            <p className="text-sm text-zinc-400">
+              Connected as{' '}
+              <span className="text-zinc-200">{githubInstallation.account_login}</span> (
+              {githubInstallation.account_type}).
+            </p>
+          )}
+
+          {githubConfigured === false && githubAppConfigured && !githubInstallation && (
+            <p className="text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3">
+              Connect the GitHub App above to create pull requests from audit findings.
+            </p>
+          )}
+        </SurfaceCard>
 
         {error && (
           <p className="text-sm text-red-300 bg-red-500/10 border border-red-500/25 rounded-xl px-4 py-3">

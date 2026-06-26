@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { runLlmObject } from '@/lib/llm/generate';
-import { githubFetch } from '@/lib/github/client';
+import { githubFetch, type GitHubFetchOptions } from '@/lib/github/client';
+import type { GitHubAuthContext } from '@/lib/github/resolve-auth';
 import {
   filterSafeFileChanges,
   MAX_FILES_PER_PR,
@@ -29,13 +30,26 @@ function decodeContent(data: ContentResponse): string {
   return data.content;
 }
 
-async function fetchRepoTree(owner: string, repo: string, branch: string): Promise<string[]> {
+function toFetchOptions(auth?: GitHubAuthContext): GitHubFetchOptions {
+  if (!auth) return {};
+  return { token: auth.token, installationId: auth.installationId };
+}
+
+async function fetchRepoTree(
+  owner: string,
+  repo: string,
+  branch: string,
+  auth?: GitHubAuthContext
+): Promise<string[]> {
+  const fetchOpts = toFetchOptions(auth);
   const ref = await githubFetch<{ object: { sha: string } }>(
-    `/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`
+    `/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`,
+    fetchOpts
   );
 
   const tree = await githubFetch<GitTreeResponse>(
-    `/repos/${owner}/${repo}/git/trees/${ref.object.sha}?recursive=1`
+    `/repos/${owner}/${repo}/git/trees/${ref.object.sha}?recursive=1`,
+    fetchOpts
   );
 
   return tree.tree.filter((item) => item.type === 'blob').map((item) => item.path);
@@ -45,11 +59,13 @@ async function fetchFileContent(
   owner: string,
   repo: string,
   path: string,
-  branch: string
+  branch: string,
+  auth?: GitHubAuthContext
 ): Promise<{ path: string; content: string } | null> {
   try {
     const data = await githubFetch<ContentResponse>(
-      `/repos/${owner}/${repo}/contents/${path.split('/').map(encodeURIComponent).join('/')}?ref=${encodeURIComponent(branch)}`
+      `/repos/${owner}/${repo}/contents/${path.split('/').map(encodeURIComponent).join('/')}?ref=${encodeURIComponent(branch)}`,
+      toFetchOptions(auth)
     );
     return { path, content: decodeContent(data) };
   } catch {
@@ -129,11 +145,21 @@ export async function applyFindingsToRepo(params: {
   keyword: string;
   findings: AuditFindingInput[];
   seoContext?: string;
+  githubAuth?: GitHubAuthContext;
 }): Promise<{ changes: FileChange[]; summary: string }> {
-  const { owner, repo, defaultBranch, contentPaths, businessName, keyword, findings, seoContext } =
-    params;
+  const {
+    owner,
+    repo,
+    defaultBranch,
+    contentPaths,
+    businessName,
+    keyword,
+    findings,
+    seoContext,
+    githubAuth,
+  } = params;
 
-  const treePaths = await fetchRepoTree(owner, repo, defaultBranch);
+  const treePaths = await fetchRepoTree(owner, repo, defaultBranch, githubAuth);
   const candidatePaths = pickCandidatePaths(treePaths, contentPaths, MAX_FILES_PER_PR * 2);
 
   if (candidatePaths.length === 0) {
@@ -142,7 +168,7 @@ export async function applyFindingsToRepo(params: {
 
   const fileContents = (
     await Promise.all(
-      candidatePaths.map((path) => fetchFileContent(owner, repo, path, defaultBranch))
+      candidatePaths.map((path) => fetchFileContent(owner, repo, path, defaultBranch, githubAuth))
     )
   ).filter((item): item is { path: string; content: string } => item !== null);
 

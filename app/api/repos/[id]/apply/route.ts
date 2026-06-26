@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/auth/require-user';
 import { applyFindingsToRepo } from '@/lib/github/apply-findings';
-import { isGitHubConfigured } from '@/lib/github/client';
 import { createPullRequestFromChanges } from '@/lib/github/create-pr';
+import { resolveGitHubAuth, isGitHubAuthAvailable } from '@/lib/github/resolve-auth';
 import type { AuditFindingInput, LinkedRepository } from '@/lib/github/types';
 import { fetchSeoPromptContext } from '@/lib/seo/prompt-context';
 import { flushLangfuseSpans } from '@/lib/langfuse/otel';
@@ -12,10 +12,8 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin';
 export const runtime = 'nodejs';
 
 // TODO(scale): horizontal-scaling debt for this PR-ing endpoint.
-//   1. Shared GitHub PAT (getGitHubToken) — a single token's 5,000 req/hr REST
-//      quota is shared across ALL users/tenants. Move to per-user GitHub App
-//      installation tokens so quota scales per customer and we don't need their
-//      raw PAT. This is the multi-tenant blocker.
+//   1. Per-user GitHub App installation tokens (Phase 1) with PAT fallback —
+//      quota still shared for legacy PAT-only deploys. Phase 2: queue + worker.
 //   2. Synchronous long request — applyFindingsToRepo runs an LLM call + many
 //      sequential GitHub API calls inside the HTTP request. Under load this hits
 //      serverless/Fly timeouts. Offload to a durable queue + worker and have the
@@ -35,9 +33,12 @@ export async function POST(
     return auth.error;
   }
 
-  if (!isGitHubConfigured()) {
+  if (!(await isGitHubAuthAvailable(auth.user.id))) {
     return NextResponse.json(
-      { error: 'GITHUB_TOKEN is not configured. Add a Personal Access Token with repo scope to .env.local.' },
+      {
+        error:
+          'GitHub is not connected. Install the SynapseCRO GitHub App in Settings → Repos, or set GITHUB_TOKEN in .env.local.',
+      },
       { status: 503 }
     );
   }
@@ -85,8 +86,20 @@ export async function POST(
     default_branch: (repoRow.default_branch as string) ?? 'main',
     repo_url: repoRow.repo_url as string,
     content_paths: Array.isArray(repoRow.content_paths) ? (repoRow.content_paths as string[]) : [],
+    installation_id: (repoRow.installation_id as number | null) ?? null,
     created_at: repoRow.created_at as string,
   };
+
+  const githubAuth = await resolveGitHubAuth(
+    auth.user.id,
+    repo.installation_id ?? null
+  );
+  if (!githubAuth) {
+    return NextResponse.json(
+      { error: 'Could not resolve GitHub credentials for this repository.' },
+      { status: 503 }
+    );
+  }
 
   const { data: auditRow, error: auditError } = await supabase
     .from('site_audits')
@@ -148,6 +161,7 @@ export async function POST(
       keyword: auditRow.keyword as string,
       findings,
       seoContext: seoContext ?? undefined,
+      githubAuth,
     });
 
     const prTitle = `SynapseCRO: SEO/CRO improvements for ${auditRow.business_name}`;
@@ -171,6 +185,7 @@ export async function POST(
       changes,
       prTitle,
       prBody,
+      githubAuth,
     });
 
     await supabase

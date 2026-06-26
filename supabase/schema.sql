@@ -156,7 +156,20 @@ create index audit_pages_audit_id_idx on public.audit_pages (audit_id);
 create index audit_findings_audit_id_idx on public.audit_findings (audit_id);
 create index audit_social_profiles_audit_id_idx on public.audit_social_profiles (audit_id);
 
--- 6. Linked GitHub Repositories & PR Change Runs
+-- 6. GitHub App installations (per-user; see docs/GITHUB_APP_SETUP.md)
+create table public.github_installations (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  installation_id bigint not null unique,
+  account_login text not null,
+  account_type text not null check (account_type in ('User', 'Organization')),
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create unique index github_installations_user_id_idx on public.github_installations (user_id);
+
+-- 7. Linked GitHub Repositories & PR Change Runs
 create table public.linked_repositories (
   id uuid primary key default gen_random_uuid(),
   lead_id uuid references public.leads(id) on delete cascade,
@@ -168,6 +181,7 @@ create table public.linked_repositories (
   default_branch text default 'main',
   repo_url text not null,
   content_paths jsonb default '[]'::jsonb,
+  installation_id bigint,
   created_at timestamptz default now()
 );
 
@@ -185,7 +199,7 @@ create table public.repo_change_runs (
   created_at timestamptz default now()
 );
 
--- 7. Visitor free audit requests
+-- 8. Visitor free audit requests
 create table public.audit_requests (
   id uuid primary key default gen_random_uuid(),
   email text not null,
@@ -207,6 +221,7 @@ create index leads_last_audit_id_idx on public.leads (last_audit_id);
 create index linked_repositories_lead_id_idx on public.linked_repositories (lead_id);
 create index linked_repositories_audit_id_idx on public.linked_repositories (audit_id);
 create index linked_repositories_user_id_idx on public.linked_repositories (user_id);
+create index linked_repositories_installation_id_idx on public.linked_repositories (installation_id);
 create index repo_change_runs_repository_id_idx on public.repo_change_runs (repository_id);
 create index repo_change_runs_audit_id_idx on public.repo_change_runs (audit_id);
 
@@ -223,6 +238,7 @@ alter table public.audit_competitors enable row level security;
 alter table public.audit_pages enable row level security;
 alter table public.audit_findings enable row level security;
 alter table public.audit_social_profiles enable row level security;
+alter table public.github_installations enable row level security;
 alter table public.linked_repositories enable row level security;
 alter table public.repo_change_runs enable row level security;
 alter table public.audit_requests enable row level security;
@@ -278,6 +294,11 @@ create policy "Public read audit_social_profiles"
   on public.audit_social_profiles for select
   to anon, authenticated
   using (true);
+
+create policy "User read github_installations"
+  on public.github_installations for select
+  to authenticated
+  using (auth.uid() = user_id);
 
 create policy "User read linked_repositories"
   on public.linked_repositories for select

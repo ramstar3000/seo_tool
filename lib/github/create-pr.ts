@@ -1,5 +1,6 @@
-import { githubFetch } from '@/lib/github/client';
+import { githubFetch, type GitHubFetchOptions } from '@/lib/github/client';
 import { notifySlack } from '@/lib/notifications/slack';
+import type { GitHubAuthContext } from '@/lib/github/resolve-auth';
 import type { FileChange } from '@/lib/github/types';
 
 interface RefResponse {
@@ -19,6 +20,11 @@ function encodePath(path: string): string {
   return path.split('/').map(encodeURIComponent).join('/');
 }
 
+function toFetchOptions(auth?: GitHubAuthContext): GitHubFetchOptions {
+  if (!auth) return {};
+  return { token: auth.token, installationId: auth.installationId };
+}
+
 export async function createPullRequestFromChanges(params: {
   owner: string;
   repo: string;
@@ -26,11 +32,14 @@ export async function createPullRequestFromChanges(params: {
   changes: FileChange[];
   prTitle: string;
   prBody: string;
+  githubAuth?: GitHubAuthContext;
 }): Promise<{ prUrl: string; prNumber: number; branchName: string }> {
-  const { owner, repo, defaultBranch, changes, prTitle, prBody } = params;
+  const { owner, repo, defaultBranch, changes, prTitle, prBody, githubAuth } = params;
+  const fetchOpts = toFetchOptions(githubAuth);
 
   const baseRef = await githubFetch<RefResponse>(
-    `/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(defaultBranch)}`
+    `/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(defaultBranch)}`,
+    fetchOpts
   );
 
   const branchName = `synapsecro/audit-${Date.now()}`;
@@ -41,6 +50,7 @@ export async function createPullRequestFromChanges(params: {
       ref: `refs/heads/${branchName}`,
       sha: baseRef.object.sha,
     }),
+    ...fetchOpts,
   });
 
   for (const change of changes) {
@@ -48,7 +58,8 @@ export async function createPullRequestFromChanges(params: {
 
     try {
       const existing = await githubFetch<ContentShaResponse>(
-        `/repos/${owner}/${repo}/contents/${encodePath(change.path)}?ref=${encodeURIComponent(branchName)}`
+        `/repos/${owner}/${repo}/contents/${encodePath(change.path)}?ref=${encodeURIComponent(branchName)}`,
+        fetchOpts
       );
       existingSha = existing.sha;
     } catch {
@@ -63,6 +74,7 @@ export async function createPullRequestFromChanges(params: {
         branch: branchName,
         ...(existingSha ? { sha: existingSha } : {}),
       }),
+      ...fetchOpts,
     });
   }
 
@@ -74,6 +86,7 @@ export async function createPullRequestFromChanges(params: {
       base: defaultBranch,
       body: prBody,
     }),
+    ...fetchOpts,
   });
 
   void notifySlack(
