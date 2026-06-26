@@ -20,6 +20,10 @@ interface AnalyzeState {
   [leadId: string]: 'loading' | 'done' | 'error';
 }
 
+interface SendState {
+  [leadId: string]: 'loading' | 'done' | 'error';
+}
+
 const selectClass =
   'min-h-10 px-3 rounded-xl bg-zinc-950/80 border border-white/[0.08] text-sm text-zinc-200 focus:border-teal-500/40 focus:outline-none focus:ring-2 focus:ring-teal-500/20';
 
@@ -111,6 +115,8 @@ export default function LeadsPage() {
   const [socialLoadingId, setSocialLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [analyzeState, setAnalyzeState] = useState<AnalyzeState>({});
+  const [sendState, setSendState] = useState<SendState>({});
+  const [isBatchSending, setIsBatchSending] = useState(false);
   const [leadAudits, setLeadAudits] = useState<LeadAuditMap>({});
 
   useEffect(() => {
@@ -220,6 +226,96 @@ export default function LeadsPage() {
       showToast('Outreach email copied');
     } catch {
       showToast('Could not copy to clipboard');
+    }
+  };
+
+  const handleSendEmail = async (lead: Lead) => {
+    setSendState((prev) => ({ ...prev, [lead.id]: 'loading' }));
+
+    try {
+      const response = await fetch(`/api/leads/${lead.id}/send-outreach`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+
+      const body = (await response.json()) as {
+        success?: boolean;
+        error?: string;
+        testMode?: boolean;
+        to?: string;
+        lead?: Lead;
+      };
+
+      if (!response.ok || !body.success) {
+        throw new Error(body.error ?? 'Failed to send outreach email');
+      }
+
+      if (body.lead) {
+        setLeads((prev) => prev.map((l) => (l.id === lead.id ? { ...l, ...body.lead! } : l)));
+      } else {
+        setLeads((prev) =>
+          prev.map((l) => (l.id === lead.id ? { ...l, status: 'contacted' as const } : l))
+        );
+      }
+      setSendState((prev) => ({ ...prev, [lead.id]: 'done' }));
+      showToast(
+        body.testMode
+          ? `Draft sent to ${body.to ?? 'test inbox'} — forward manually to prospect`
+          : `Outreach sent to ${body.to ?? 'prospect'}`
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to send outreach email';
+      setSendState((prev) => ({ ...prev, [lead.id]: 'error' }));
+      showToast(message);
+    }
+  };
+
+  const handleBatchSend = async () => {
+    const newCount = leads.filter((l) => l.status === 'new').length;
+    if (newCount === 0) {
+      showToast('No leads with status "new" to send');
+      return;
+    }
+
+    setIsBatchSending(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/leads/outreach/send-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ max: 5 }),
+      });
+
+      const body = (await response.json()) as {
+        success?: boolean;
+        sent?: number;
+        failed?: number;
+        attempted?: number;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(body.error ?? 'Batch send failed');
+      }
+
+      if ((body.sent ?? 0) > 0) {
+        setIsLoading(true);
+        const data = await requestLeads(rankFilter, categoryFilter);
+        setLeads(data);
+        setIsLoading(false);
+      }
+
+      showToast(
+        `Batch complete: ${body.sent ?? 0} sent${body.failed ? `, ${body.failed} failed` : ''}`
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Batch send failed';
+      setError(message);
+      showToast(message);
+    } finally {
+      setIsBatchSending(false);
     }
   };
 
@@ -335,6 +431,15 @@ export default function LeadsPage() {
                 className="inline-flex min-h-10 items-center px-5 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-60 text-white text-sm font-medium transition-colors"
               >
                 {isDiscovering ? 'Finding leads…' : 'Find leads'}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleBatchSend()}
+                disabled={isBatchSending || isLoading}
+                className="inline-flex min-h-10 items-center px-4 rounded-xl border border-teal-500/30 bg-teal-500/10 text-teal-300 hover:bg-teal-500/20 disabled:opacity-60 text-sm font-medium transition-colors"
+                title="Send outreach to up to 5 leads with status new (requires login + Resend config)"
+              >
+                {isBatchSending ? 'Sending…' : 'Send to new leads'}
               </button>
               {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
               <a
@@ -458,6 +563,25 @@ export default function LeadsPage() {
                                   </select>
                                 </td>
                                 <td className="px-4 py-3 space-y-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => void handleSendEmail(lead)}
+                                    disabled={sendState[lead.id] === 'loading'}
+                                    className="block text-xs font-medium text-teal-400 hover:text-teal-300 disabled:opacity-60 text-left"
+                                    title={
+                                      lead.status === 'contacted'
+                                        ? 'Already contacted — sends again if needed'
+                                        : 'Sends via Resend to OUTREACH_TARGET_EMAIL (leads have no prospect email in DB)'
+                                    }
+                                  >
+                                    {sendState[lead.id] === 'loading'
+                                      ? 'Sending…'
+                                      : sendState[lead.id] === 'error'
+                                        ? 'Retry send'
+                                        : lead.status === 'contacted'
+                                          ? 'Resend email'
+                                          : 'Send email'}
+                                  </button>
                                   <button
                                     type="button"
                                     onClick={() => void handleCopyEmail(lead)}
@@ -604,7 +728,10 @@ export default function LeadsPage() {
             )}
 
             <p className="text-sm text-zinc-500">
-              Without a Tavily key, demo mode loads 30 seeded London businesses.
+              Without a Tavily key, demo mode loads 30 seeded London businesses. Leads have no
+              prospect email — set <code className="text-zinc-400">OUTREACH_TARGET_EMAIL</code> and{' '}
+              <code className="text-zinc-400">RESEND_API_KEY</code> to send drafts via Resend, then
+              forward manually.
             </p>
           </div>
 

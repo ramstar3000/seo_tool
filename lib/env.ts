@@ -59,6 +59,19 @@ export function getResendFromEmail(): string {
   return process.env.RESEND_FROM_EMAIL ?? 'SynapseCRO <onboarding@resend.dev>';
 }
 
+/** Fallback recipient when leads have no prospect email (demo / draft workflow). */
+export function getOutreachTargetEmail(): string | undefined {
+  return process.env.OUTREACH_TARGET_EMAIL?.trim() || undefined;
+}
+
+export function hasResendConfig(): boolean {
+  return Boolean(getResendApiKey());
+}
+
+export function hasOutreachSendConfig(): boolean {
+  return hasResendConfig() && Boolean(getOutreachTargetEmail());
+}
+
 export function getAppBaseUrl(): string {
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
   if (process.env.FLY_APP_NAME) return `https://${process.env.FLY_APP_NAME}.fly.dev`;
