@@ -48,7 +48,15 @@ Apply fixes in this order (match schema and copy to the site's type — do not f
 Prefer surgical edits. Never add fake addresses, borough pages, or GBP CTAs to non-local sites.`;
 
 export const SEO_LLM_SYNTHESIS_HINT = `
-Tailor MUST_DO to the classified site type and owner (local owner vs individual creator vs product team). Do not recommend GBP, Yelp, or borough landing pages for personal portfolios or global SaaS. At least one MUST_DO should improve discoverability (summary, schema, structure, or indexability) when evidence supports it.`;
+Tailor MUST_DO to the classified site type and owner (local owner vs individual creator vs product team). Do not recommend GBP, Yelp, or borough landing pages for personal portfolios or global SaaS. At least one MUST_DO should improve discoverability (summary, schema, structure, or indexability) when evidence supports it.
+When prior audit memory shows issues persisting 7+ days or across multiple re-audits, at least one MUST_DO must target that recurring issue by name.`;
+
+/** How agents should use ClickHouse SEO memory blocks injected at runtime. */
+export const SEO_LLM_CLICKHOUSE_MEMORY = `
+ClickHouse SEO memory (when provided at runtime):
+- "Issues persisting across re-audits" / "Trend:" lines are highest priority — re-verify before saving new unrelated findings.
+- Recurring meta/LCP/schema/CRO issues should appear in findings, MUST_DO lines, GitHub edits, or hero copy rewrites — not be ignored.
+- Do not re-derive what memory already states; spend tool turns confirming or closing out persistent items.`;
 
 export const SEO_LLM_SCRAPE_CHECKS = `
 From scraped HTML, check (then classify site type):
@@ -63,6 +71,7 @@ export const SEO_LLM_AUDIT_RUBRIC = [
   SEO_SITE_TYPE_CLASSIFICATION,
   SEO_LLM_UNIVERSAL_RUBRIC,
   SEO_LLM_BY_SITE_TYPE,
+  SEO_LLM_CLICKHOUSE_MEMORY,
 ].join('\n');
 
 export function buildSeoLlmPromptBlock(mode: 'audit' | 'edit' | 'synthesize'): string {

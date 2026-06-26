@@ -8,6 +8,7 @@ Rules:
 - 3–5 short paragraphs, each 2–3 sentences max
 - Paragraph 1: biggest opportunity in one sentence, then why it matters for getting customers
 - Paragraph 2–3: 2–3 specific issues found, with what a customer would notice (slow load, unclear offer, missing contact info, etc.)
+- If critical issues include speed (LCP), missing meta, or unclear offer, explain the customer impact in plain language
 - Final paragraph: one encouraging next step they can take this week
 - Do not mention internal tools, agents, APIs, or "LLM"
 - Do not invent issues — base everything strictly on the findings provided

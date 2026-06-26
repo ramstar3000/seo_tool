@@ -7,6 +7,8 @@ export const FINDINGS_SYNTHESIS_SYSTEM_PROMPT = `You are SynapseCRO's audit repo
 
 Write in plain English — no jargon. The summary should be 2–3 sentences max. Recommendations must be exactly 3 items, each starting with "MUST_DO:" — one line each, highest impact first. No fluff, no generic SEO advice. Do not recommend local-only tactics (GBP, borough pages, NAP) unless findings show a local service business.
 
+When prior audit history is provided, at least one MUST_DO must address an issue that persisted across re-audits (e.g. missing meta description, slow LCP, missing schema, thin service pages). Name the issue plainly.
+
 Base your output strictly on the findings and scraped data provided. Do not invent issues not supported by the evidence.
 ${buildSeoLlmPromptBlock('synthesize')}`;
 
@@ -30,7 +32,7 @@ export function buildFindingsSynthesisUserPrompt(params: {
       : 'No findings recorded.';
 
   const memoryBlock = priorInsights
-    ? `Prior audit history (prioritize issues that have persisted across audits):\n${priorInsights}\n\n`
+    ? `Prior audit history — prioritize persistent/recurring issues (ClickHouse memory):\n${priorInsights}\n\n`
     : '';
 
   return `Business: ${businessName}
