@@ -56,7 +56,7 @@ export function getFirecrawlApiKey(): string | undefined {
 }
 
 export function getGitHubToken(): string | undefined {
-  return process.env.GITHUB_TOKEN ?? process.env.GITHUB_PAT_TOKEN;
+  return process.env.GITHUB_TOKEN;
 }
 
 export function getGooglePageSpeedApiKey(): string | undefined {
