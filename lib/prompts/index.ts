@@ -14,10 +14,6 @@ export {
   buildFindingsSynthesisUserPrompt,
 } from '@/lib/prompts/findings-synthesis';
 export {
-  SOCIAL_PRESENCE_SYSTEM_PROMPT,
-  buildSocialPresenceUserPrompt,
-} from '@/lib/prompts/social-presence';
-export {
   GITHUB_CHANGES_SYSTEM_PROMPT,
   buildGitHubChangesUserPrompt,
 } from '@/lib/prompts/github-changes';

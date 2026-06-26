@@ -25,8 +25,13 @@ export function buildResearchAgentUserTask(params: {
   keyword: string;
   businessName: string;
   location?: string;
+  priorInsights?: string | null;
 }): string {
-  const { targetUrl, keyword, businessName, location = 'London' } = params;
+  const { targetUrl, keyword, businessName, location = 'London', priorInsights } = params;
+
+  const memoryBlock = priorInsights
+    ? `\nMemory from prior audits of this business (use it to prioritize: re-verify whether persistent issues are still present, flag any that have recurred, and don't waste turns re-deriving what's already known):\n${priorInsights}\n`
+    : '';
 
   return `Audit this local business website:
 
@@ -34,6 +39,6 @@ Business: ${businessName}
 Location: ${location}
 Target URL: ${targetUrl}
 Primary keyword: ${keyword}
-
+${memoryBlock}
 Conduct a thorough SEO and CRO audit. Scrape the homepage and key internal pages, analyze competitors for "${keyword}", check Core Web Vitals with check_page_speed, check social & directory presence (LinkedIn, Instagram, GBP, Yelp, etc.) and compare messaging across web + socials, check on-site messaging consistency, and save actionable findings. Finalize with a summary and recommendations.`;
 }

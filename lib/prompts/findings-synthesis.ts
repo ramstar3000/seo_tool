@@ -14,8 +14,10 @@ export function buildFindingsSynthesisUserPrompt(params: {
   findings: Array<{ severity: string; category: string; title: string; description: string }>;
   agentSummary?: string;
   agentRecommendations?: string;
+  priorInsights?: string | null;
 }): string {
-  const { businessName, targetUrl, keyword, findings, agentSummary, agentRecommendations } = params;
+  const { businessName, targetUrl, keyword, findings, agentSummary, agentRecommendations, priorInsights } =
+    params;
 
   const findingsBlock =
     findings.length > 0
@@ -24,11 +26,15 @@ export function buildFindingsSynthesisUserPrompt(params: {
           .join('\n')
       : 'No findings recorded.';
 
+  const memoryBlock = priorInsights
+    ? `Prior audit history (prioritize issues that have persisted across audits):\n${priorInsights}\n\n`
+    : '';
+
   return `Business: ${businessName}
 URL: ${targetUrl}
 Keyword: ${keyword}
 
-Findings:
+${memoryBlock}Findings:
 ${findingsBlock}
 
 ${agentSummary ? `Agent draft summary:\n${agentSummary}\n` : ''}${agentRecommendations ? `Agent draft recommendations:\n${agentRecommendations}\n` : ''}

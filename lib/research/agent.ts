@@ -12,6 +12,7 @@ import {
   buildResearchAgentUserTask,
   RESEARCH_AGENT_SYSTEM_PROMPT,
 } from '@/lib/prompts/research-agent';
+import { fetchSeoPromptContext } from '@/lib/seo/prompt-context';
 import { auditReportSchema } from '@/lib/research/schemas';
 import { MAX_AGENT_TURNS, MAX_PAGE_SCRAPES } from '@/lib/research/tools';
 import type {
@@ -41,7 +42,26 @@ function buildPagesFromContext(ctx: ToolContext, targetUrl: string): AuditPage[]
   return pages;
 }
 
-async function synthesizeFinalReport(ctx: ToolContext): Promise<{ summary: string; recommendations: string }> {
+/**
+ * Load historical SEO insights for this business from ClickHouse so the audit
+ * runs "warm" (aware of prior/persistent findings). Never fail the audit if the
+ * memory store is unavailable — degrade to a cold run.
+ */
+async function loadAuditMemory(params: {
+  leadId?: string;
+  keyword?: string;
+}): Promise<string | null> {
+  try {
+    return await fetchSeoPromptContext(params);
+  } catch {
+    return null;
+  }
+}
+
+async function synthesizeFinalReport(
+  ctx: ToolContext,
+  priorInsights: string | null
+): Promise<{ summary: string; recommendations: string }> {
   if (ctx.summary && ctx.recommendations) {
     try {
       const object = await runLlmObject({
@@ -54,6 +74,7 @@ async function synthesizeFinalReport(ctx: ToolContext): Promise<{ summary: strin
           findings: ctx.findings,
           agentSummary: ctx.summary,
           agentRecommendations: ctx.recommendations,
+          priorInsights,
         }),
         telemetry: { functionId: 'findings-synthesis' },
       });
@@ -107,6 +128,8 @@ async function runResearchAgentWithLlm(params: RunResearchAgentParams): Promise<
     recommendations: null,
   };
 
+  const priorInsights = await loadAuditMemory({ leadId, keyword });
+
   const toolTrace: ToolTraceEntry[] = [];
   let currentTurn = 1;
 
@@ -129,7 +152,7 @@ async function runResearchAgentWithLlm(params: RunResearchAgentParams): Promise<
       await runLlmAgentGenerateText({
         model: getResearchModel(),
         system: RESEARCH_AGENT_SYSTEM_PROMPT,
-        prompt: buildResearchAgentUserTask({ targetUrl, keyword, businessName, location }),
+        prompt: buildResearchAgentUserTask({ targetUrl, keyword, businessName, location, priorInsights }),
         tools: createResearchAgentTools(ctx, toolTrace, () => currentTurn),
         stopWhen: ({ steps }) => steps.length >= MAX_AGENT_TURNS || ctx.finalized,
         onStepStart: ({ stepNumber }) => {
@@ -138,7 +161,7 @@ async function runResearchAgentWithLlm(params: RunResearchAgentParams): Promise<
         telemetry: { functionId: 'research-agent' },
       });
 
-      return synthesizeFinalReport(ctx);
+      return synthesizeFinalReport(ctx, priorInsights);
     }
   );
   const now = new Date().toISOString();
