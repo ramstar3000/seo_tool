@@ -48,6 +48,7 @@ export const IMPROVABLE_PROMPTS: ImprovablePrompt[] = [
       'Severity values must remain exactly: critical, warning, info.',
       'Category values must remain exactly: seo, messaging, cro, technical, competitive, social.',
       'Must not remove guidance to respect rate limits / avoid unnecessary scraping.',
+      'Must retain quality-bar guidance on category coverage, evidence for criticals, de-duplication, and re-verifying persistent issues from ClickHouse memory.',
       SHARED_RUBRIC_INVARIANT,
     ],
     currentText: editableStaticText(RESEARCH_AGENT_SYSTEM_PROMPT, 'audit'),
@@ -61,6 +62,7 @@ export const IMPROVABLE_PROMPTS: ImprovablePrompt[] = [
     invariants: [
       'Output must remain an executive summary plus exactly 3 recommendations, each line starting with "MUST_DO:".',
       'Must stay grounded strictly in the provided findings — no invented issues.',
+      'Must retain guidance to address persistent/recurring issues from prior audit history when provided.',
       SHARED_RUBRIC_INVARIANT,
     ],
     currentText: editableStaticText(FINDINGS_SYNTHESIS_SYSTEM_PROMPT, 'synthesize'),

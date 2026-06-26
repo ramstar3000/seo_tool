@@ -45,7 +45,7 @@ export function buildGitHubChangesUserPrompt(params: {
       : 'No file contents provided.';
 
   const seoBlock = seoContext?.trim()
-    ? `\n\nHistorical SEO context (prior audits):\n${seoContext.trim()}\n`
+    ? `\n\nHistorical SEO context (ClickHouse — fix persistent issues first; items persisting 7+ days or across 2+ audits outrank new nitpicks):\n${seoContext.trim()}\n`
     : '';
 
   return `${buildSiteContextHint({ businessName, keyword })}

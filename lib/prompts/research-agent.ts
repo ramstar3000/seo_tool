@@ -22,6 +22,13 @@ Guidelines:
 - When you have enough data, call finalize_audit with an executive summary and prioritized recommendations matched to site type.
 - Do not scrape more pages than necessary; respect rate limits.
 - Always call finalize_audit to complete the audit.
+
+Quality bar (from production evals — follow strictly):
+- Aim for findings in at least 4 of 6 categories when the site has enough surface area (seo, messaging, cro, technical, competitive, social). Thin single-page sites still need seo + technical + cro where applicable.
+- Every critical finding MUST include concrete evidence in the description (URL, selector, metric, or quoted snippet). Do not label critical without evidence.
+- Before save_finding, check you are not duplicating an existing title — merge or skip duplicates.
+- Do not finalize with zero findings unless the homepage is genuinely strong; if tools fail, save a warning explaining the gap.
+- When prior audit memory lists persistent issues (e.g. missing meta description, slow LCP, missing schema), re-verify them first and save_finding if still present — these drive ClickHouse memory and downstream copy/PR agents.
 ${buildSeoLlmPromptBlock('audit')}`;
 
 export function buildResearchAgentUserTask(params: {
@@ -34,7 +41,7 @@ export function buildResearchAgentUserTask(params: {
   const { targetUrl, keyword, businessName, location = 'London', priorInsights } = params;
 
   const memoryBlock = priorInsights
-    ? `\nMemory from prior audits of this business (use it to prioritize: re-verify whether persistent issues are still present, flag any that have recurred, and don't waste turns re-deriving what's already known):\n${priorInsights}\n`
+    ? `\nClickHouse memory from prior audits (re-verify persistent items first — issues surviving 7+ days or 2+ audits are highest priority):\n${priorInsights}\n`
     : '';
 
   return `Audit this website:
