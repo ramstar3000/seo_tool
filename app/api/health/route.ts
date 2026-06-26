@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { getLlmSpendCapUsd } from '@/lib/cost/limits';
+import { getGlobalSpendUsd, getLlmSpendUsd } from '@/lib/cost/tracker';
 import { getActiveLlmProvider, getActiveModelId, isResearchLlmConfigured } from '@/lib/llm/client';
 import { hasSupabaseConfig, hasTavilyConfig } from '@/lib/env';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
@@ -10,6 +12,14 @@ export async function GET() {
   const supabaseConfigured = hasSupabaseConfig();
   const llmConfigured = isResearchLlmConfigured();
   const llmProvider = getActiveLlmProvider();
+  const llmSpendCapUsd = getLlmSpendCapUsd();
+  const llmSpendUsd = llmConfigured
+    ? Math.round((await getLlmSpendUsd()) * 1e4) / 1e4
+    : null;
+  const globalSpendUsd = Math.round((await getGlobalSpendUsd()) * 1e4) / 1e4;
+  const globalCapUsd = process.env.GLOBAL_SPEND_CAP_USD
+    ? Number(process.env.GLOBAL_SPEND_CAP_USD)
+    : null;
 
   let schemaOk: boolean | null = null;
   let missingTables: string[] = [];
@@ -31,7 +41,17 @@ export async function GET() {
       llm: llmConfigured,
       llmProvider,
       llmModel: llmConfigured ? getActiveModelId() : null,
+      llmSpendUsd,
+      llmSpendCapUsd: llmConfigured ? llmSpendCapUsd : null,
       tavily: hasTavilyConfig(),
+      cost: {
+        spendUsd: globalSpendUsd,
+        capUsd: globalCapUsd,
+        capped: globalCapUsd !== null && globalSpendUsd >= globalCapUsd,
+        llmSpendUsd,
+        llmCapUsd: llmConfigured ? llmSpendCapUsd : null,
+        llmCapped: llmConfigured && llmSpendUsd !== null && llmSpendUsd >= llmSpendCapUsd,
+      },
       schema: schemaOk,
       /** @deprecated use config.llm */
       anthropic: llmConfigured,

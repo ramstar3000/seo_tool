@@ -20,6 +20,20 @@ create table public.analytics_events (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+
+-- LLM usage tracking (Gemini spend cap; service-role writes only)
+create table public.llm_usage_events (
+  id uuid primary key default gen_random_uuid(),
+  provider text not null,
+  model text not null,
+  input_tokens int not null default 0,
+  output_tokens int not null default 0,
+  estimated_usd numeric(12, 6) not null default 0,
+  created_at timestamptz default now()
+);
+
+create index llm_usage_events_created_at_idx on public.llm_usage_events (created_at desc);
+
 -- 3. Agent Cognitive Log (Dashboard Stream)
 create table public.agent_brain_logs (
   id uuid default gen_random_uuid() primary key,
@@ -173,6 +187,19 @@ create index audit_requests_created_at_idx on public.audit_requests (created_at 
 create index audit_requests_site_audit_id_idx on public.audit_requests (site_audit_id);
 create index audit_requests_lead_id_idx on public.audit_requests (lead_id);
 
+-- 8. LLM usage tracking (all-time spend cap; service role inserts only)
+create table public.llm_usage_events (
+  id uuid primary key default gen_random_uuid(),
+  provider text not null check (provider in ('gemini', 'anthropic')),
+  model text not null,
+  input_tokens int not null default 0,
+  output_tokens int not null default 0,
+  estimated_usd numeric(12, 6) not null default 0,
+  created_at timestamptz default now()
+);
+
+create index llm_usage_events_created_at_idx on public.llm_usage_events (created_at desc);
+
 create index leads_last_audit_id_idx on public.leads (last_audit_id);
 create index linked_repositories_lead_id_idx on public.linked_repositories (lead_id);
 create index linked_repositories_audit_id_idx on public.linked_repositories (audit_id);
@@ -183,6 +210,7 @@ create index repo_change_runs_audit_id_idx on public.repo_change_runs (audit_id)
 -- Row Level Security
 alter table public.site_copy enable row level security;
 alter table public.analytics_events enable row level security;
+alter table public.llm_usage_events enable row level security;
 alter table public.agent_brain_logs enable row level security;
 alter table public.leads enable row level security;
 alter table public.lead_discovery_runs enable row level security;
@@ -194,6 +222,7 @@ alter table public.audit_social_profiles enable row level security;
 alter table public.linked_repositories enable row level security;
 alter table public.repo_change_runs enable row level security;
 alter table public.audit_requests enable row level security;
+alter table public.llm_usage_events enable row level security;
 
 create policy "Public read site_copy"
   on public.site_copy for select

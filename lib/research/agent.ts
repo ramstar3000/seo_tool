@@ -1,6 +1,5 @@
-import { generateText } from 'ai';
 import { getResearchModel, isResearchLlmConfigured } from '@/lib/llm/client';
-import { runLlmObject } from '@/lib/llm/generate';
+import { LlmSpendCapExceededError, runLlmAgentGenerateText, runLlmObject } from '@/lib/llm/generate';
 import { createResearchAgentTools } from '@/lib/research/agent-tools';
 import { runOfflineResearchAudit } from '@/lib/research/offline-audit';
 import {
@@ -73,6 +72,17 @@ export async function runResearchAgent(params: RunResearchAgentParams): Promise<
     return runOfflineResearchAudit(params);
   }
 
+  try {
+    return await runResearchAgentWithLlm(params);
+  } catch (error) {
+    if (error instanceof LlmSpendCapExceededError) {
+      return runOfflineResearchAudit(params);
+    }
+    throw error;
+  }
+}
+
+async function runResearchAgentWithLlm(params: RunResearchAgentParams): Promise<ResearchAgentResult> {
   const { targetUrl, keyword, businessName, location = 'London', leadId } = params;
 
   const ctx: ToolContext = {
@@ -97,7 +107,7 @@ export async function runResearchAgent(params: RunResearchAgentParams): Promise<
   const toolTrace: ToolTraceEntry[] = [];
   let currentTurn = 1;
 
-  await generateText({
+  await runLlmAgentGenerateText({
     model: getResearchModel(),
     system: RESEARCH_AGENT_SYSTEM_PROMPT,
     prompt: buildResearchAgentUserTask({ targetUrl, keyword, businessName, location }),

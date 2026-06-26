@@ -22,6 +22,22 @@ export function getGeminiModel(): string {
   return process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
 }
 
+/** All-time LLM spend cap in USD (default $30). Applies to Gemini and Anthropic usage. */
+export function getGeminiSpendCapUsd(): number {
+  const raw = process.env.GEMINI_SPEND_CAP_USD;
+  if (raw === undefined || raw.trim() === '') return 30;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 30;
+}
+
+/** Optional global cap across all tracked API providers. */
+export function getGlobalSpendCapUsd(): number | null {
+  const raw = process.env.GLOBAL_SPEND_CAP_USD;
+  if (raw === undefined || raw.trim() === '') return null;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
 export function getTavilyApiKey(): string | undefined {
   return process.env.TAVILY_API_KEY;
 }
@@ -57,6 +73,11 @@ export function getResendApiKey(): string | undefined {
 
 export function getResendFromEmail(): string {
   return process.env.RESEND_FROM_EMAIL ?? 'SynapseCRO <onboarding@resend.dev>';
+}
+
+/** Inbox that prospect replies land in. Sending is via a cold-send domain, but replies go here. */
+export function getResendReplyToEmail(): string {
+  return process.env.RESEND_REPLY_TO_EMAIL?.trim() || 'ram+seo@acylic.dev';
 }
 
 /** Fallback recipient when leads have no prospect email (demo / draft workflow). */

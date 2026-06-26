@@ -8,6 +8,7 @@ const REQUIRED_TABLES = [
   'audit_competitors',
   'audit_social_profiles',
   'leads',
+  'llm_usage_events',
 ] as const;
 
 export type SchemaHealthResult = {

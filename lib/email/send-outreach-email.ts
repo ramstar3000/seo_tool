@@ -1,4 +1,6 @@
-import { getResendApiKey, getResendFromEmail } from '@/lib/env';
+import { ApiSpendCapExceededError, assertWithinBudget } from '@/lib/cost/check';
+import { recordApiUsage } from '@/lib/cost/tracker';
+import { getResendApiKey, getResendFromEmail, getResendReplyToEmail } from '@/lib/env';
 
 export interface SendOutreachEmailParams {
   to: string;
@@ -14,6 +16,16 @@ export async function sendOutreachEmail(params: SendOutreachEmailParams): Promis
   if (!apiKey) return false;
 
   try {
+    await assertWithinBudget('resend');
+  } catch (error) {
+    if (error instanceof ApiSpendCapExceededError) {
+      console.warn('[email] Resend spend cap reached');
+      throw error;
+    }
+    throw error;
+  }
+
+  try {
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -23,6 +35,7 @@ export async function sendOutreachEmail(params: SendOutreachEmailParams): Promis
       body: JSON.stringify({
         from: getResendFromEmail(),
         to: params.to,
+        reply_to: getResendReplyToEmail(),
         subject: params.subject,
         text: params.body,
         html: buildOutreachEmailHtml(params),
@@ -34,6 +47,13 @@ export async function sendOutreachEmail(params: SendOutreachEmailParams): Promis
       console.error('[email] Resend outreach failed:', response.status, body);
       return false;
     }
+
+    await recordApiUsage({
+      provider: 'resend',
+      operation: 'send_email',
+      units: 1,
+      metadata: { type: 'outreach', testMode: params.testMode ?? false },
+    });
 
     return true;
   } catch (error) {
