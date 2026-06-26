@@ -15,7 +15,11 @@ export function getAnthropicApiKey(): string | undefined {
 }
 
 export function getGeminiApiKey(): string | undefined {
-  return process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+  return (
+    process.env.GEMINI_API_KEY ??
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY ??
+    process.env.GOOGLE_API_KEY
+  );
 }
 
 export function getGeminiModel(): string {
@@ -60,7 +64,7 @@ export function getGitHubToken(): string | undefined {
 }
 
 export function getGooglePageSpeedApiKey(): string | undefined {
-  return process.env.GOOGLE_PAGESPEED_API_KEY;
+  return process.env.GOOGLE_PAGESPEED_API_KEY ?? process.env.GOOGLE_API_KEY;
 }
 
 export function getSlackWebhookUrl(): string | undefined {

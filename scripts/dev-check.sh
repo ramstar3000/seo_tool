@@ -23,6 +23,8 @@ Required for core app (database + auth):
 
 Required for full agent features:
   GEMINI_API_KEY                 Primary LLM (Gemini / DeepMind) for agent, CRO, PR edits
+  GOOGLE_GENERATIVE_AI_API_KEY   Alias for GEMINI_API_KEY (@ai-sdk/google convention)
+  GOOGLE_API_KEY                 Alias for GEMINI_API_KEY (common GCP key name)
   ANTHROPIC_API_KEY              Fallback LLM if Gemini is not configured
 
 Optional — enhanced discovery & scraping:
@@ -37,6 +39,7 @@ Optional — Fly.io / cron (see docs/FLY_DEPLOY.md):
 
 Optional — Core Web Vitals in research audits:
   GOOGLE_PAGESPEED_API_KEY       Google PageSpeed Insights API key (skips gracefully if unset)
+                                 Falls back to GOOGLE_API_KEY when unset
 
 Optional — Slack notifications:
   SLACK_WEBHOOK_URL              Incoming webhook for audit-complete and PR-created alerts
