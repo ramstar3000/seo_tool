@@ -179,8 +179,14 @@ export async function recordAuditInsights(params: RecordAuditInsightsParams): Pr
     leadId: audit.lead_id,
     businessName: audit.business_name,
     keyword: audit.keyword,
-    findingCount: findings.length,
-    criticalCount: severityCounts.critical,
+    targetUrl: audit.target_url,
+    findings,
+    summary: audit.summary,
+    recommendations: audit.recommendations,
+    toolTrace: audit.tool_trace,
+    rankPosition: rankPosition ?? null,
+    lcpMs: lcpMs ?? null,
+    competitorCount: competitorCount ?? null,
   });
 
   await flushLangfuseSpans();

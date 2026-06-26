@@ -1,5 +1,12 @@
 import { flushLangfuse, getLangfuseClient, hasLangfuseConfig } from '@/lib/langfuse/client';
 import { recordLlmEvalInClickHouse } from '@/lib/clickhouse/evals';
+import {
+  computeResearchEvalScores,
+  runResearchQualityJudge,
+  type ResearchEvalInput,
+} from '@/lib/langfuse/research-eval';
+import { researchSessionId } from '@/lib/langfuse/session';
+import type { AuditFinding, ToolTraceEntry } from '@/lib/research/types';
 
 export interface TraceOptimizeParams {
   leadId?: string;
@@ -92,30 +99,56 @@ export interface TraceResearchParams {
   leadId?: string | null;
   businessName: string;
   keyword: string;
-  findingCount: number;
-  criticalCount: number;
+  targetUrl?: string | null;
+  findings: AuditFinding[];
+  summary?: string | null;
+  recommendations?: string | null;
+  toolTrace?: ToolTraceEntry[];
+  rankPosition?: number | null;
+  lcpMs?: number | null;
+  competitorCount?: number | null;
 }
 
 export async function traceResearchAudit(params: TraceResearchParams): Promise<void> {
-  const scores = [
-    { name: 'finding_count', value: params.findingCount },
-    { name: 'critical_count', value: params.criticalCount },
-  ];
+  const evalInput: ResearchEvalInput = {
+    findings: params.findings,
+    summary: params.summary ?? null,
+    recommendations: params.recommendations ?? null,
+    toolTrace: params.toolTrace ?? [],
+    rankPosition: params.rankPosition,
+    lcpMs: params.lcpMs,
+    competitorCount: params.competitorCount,
+  };
+
+  // Deterministic signals are free; the LLM judge runs in parallel and degrades
+  // gracefully to [] when disabled or on error.
+  const sessionId = researchSessionId({ leadId: params.leadId, targetUrl: params.targetUrl });
+
+  const [deterministic, judged] = await Promise.all([
+    Promise.resolve(computeResearchEvalScores(evalInput)),
+    runResearchQualityJudge(evalInput, sessionId),
+  ]);
+  const scores = [...deterministic, ...judged];
+  const metadata = {
+    businessName: params.businessName,
+    keyword: params.keyword,
+    targetUrl: params.targetUrl ?? null,
+    auditId: params.auditId ?? null,
+    judgeApplied: judged.length > 0,
+  };
 
   if (hasLangfuseConfig()) {
     try {
       const lf = getLangfuseClient()!;
       const trace = lf.trace({
         name: 'synapsecro.research_audit.eval',
-        sessionId: params.leadId ?? params.auditId,
+        sessionId,
+        userId: params.leadId ?? undefined,
         tags: ['research', 'audit', 'eval'],
-        metadata: {
-          businessName: params.businessName,
-          keyword: params.keyword,
-        },
+        metadata,
       });
       for (const score of scores) {
-        trace.score({ name: score.name, value: score.value });
+        trace.score({ name: score.name, value: score.value, comment: score.comment });
       }
       await flushLangfuse();
     } catch (error) {
@@ -128,9 +161,6 @@ export async function traceResearchAudit(params: TraceResearchParams): Promise<v
     leadId: params.leadId ?? null,
     auditId: params.auditId ?? null,
     scores,
-    metadata: {
-      businessName: params.businessName,
-      keyword: params.keyword,
-    },
+    metadata,
   });
 }

@@ -1,4 +1,6 @@
+import { propagateAttributes } from '@langfuse/tracing';
 import { getResearchModel, isResearchLlmConfigured } from '@/lib/llm/client';
+import { researchSessionId } from '@/lib/langfuse/session';
 import { LlmSpendCapExceededError, runLlmAgentGenerateText, runLlmObject } from '@/lib/llm/generate';
 import { createResearchAgentTools } from '@/lib/research/agent-tools';
 import { runOfflineResearchAudit } from '@/lib/research/offline-audit';
@@ -108,19 +110,37 @@ async function runResearchAgentWithLlm(params: RunResearchAgentParams): Promise<
   const toolTrace: ToolTraceEntry[] = [];
   let currentTurn = 1;
 
-  await runLlmAgentGenerateText({
-    model: getResearchModel(),
-    system: RESEARCH_AGENT_SYSTEM_PROMPT,
-    prompt: buildResearchAgentUserTask({ targetUrl, keyword, businessName, location }),
-    tools: createResearchAgentTools(ctx, toolTrace, () => currentTurn),
-    stopWhen: ({ steps }) => steps.length >= MAX_AGENT_TURNS || ctx.finalized,
-    onStepStart: ({ stepNumber }) => {
-      currentTurn = stepNumber;
+  // Name + enrich the generation trace and share the eval's session key so the
+  // agent run and its downstream quality scores are correlatable in Langfuse.
+  const report = await propagateAttributes(
+    {
+      traceName: 'synapsecro.research_audit',
+      sessionId: researchSessionId({ leadId, targetUrl }),
+      tags: ['research', 'audit', 'agent'],
+      metadata: {
+        targetUrl,
+        keyword,
+        businessName,
+        location,
+        ...(leadId ? { leadId } : {}),
+      },
     },
-    telemetry: { functionId: 'research-agent' },
-  });
+    async () => {
+      await runLlmAgentGenerateText({
+        model: getResearchModel(),
+        system: RESEARCH_AGENT_SYSTEM_PROMPT,
+        prompt: buildResearchAgentUserTask({ targetUrl, keyword, businessName, location }),
+        tools: createResearchAgentTools(ctx, toolTrace, () => currentTurn),
+        stopWhen: ({ steps }) => steps.length >= MAX_AGENT_TURNS || ctx.finalized,
+        onStepStart: ({ stepNumber }) => {
+          currentTurn = stepNumber;
+        },
+        telemetry: { functionId: 'research-agent' },
+      });
 
-  const report = await synthesizeFinalReport(ctx);
+      return synthesizeFinalReport(ctx);
+    }
+  );
   const now = new Date().toISOString();
   return {
     audit: {
