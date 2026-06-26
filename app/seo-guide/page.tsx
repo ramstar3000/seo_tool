@@ -7,7 +7,7 @@ import {
 import { PageContainer, SurfaceCard } from '@/components/ui/PageContainer';
 
 export const metadata = {
-  title: 'SEO Guide — SynapseCRO',
+  title: 'SEO Guide for London Local Businesses — SynapseCRO',
   description:
     'Practical SEO checklist for London local businesses: Google Business Profile, on-page, technical, and content.',
 };
