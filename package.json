@@ -15,7 +15,8 @@
     "clickhouse:smoke": "node scripts/smoke-clickhouse.mjs",
     "clickhouse:check-env": "node scripts/check-clickhouse-env.mjs",
     "clickhouse:cloud-provision": "node scripts/clickhouse-cloud-provision.mjs --create-if-missing",
-    "clickhouse:seed-demo": "node scripts/seed-clickhouse-demo.mjs"
+    "clickhouse:seed-demo": "node scripts/seed-clickhouse-demo.mjs",
+    "populate-evals": "node scripts/populate-evals.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.0",
