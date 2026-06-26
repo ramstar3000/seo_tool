@@ -47,6 +47,42 @@ export default function SettingsReposPage() {
           </p>
         </header>
 
+        <SurfaceCard className="p-5 sm:p-6 space-y-4">
+          <div className="space-y-1.5">
+            <h2 className="text-base font-semibold text-white">How fix PRs are delivered</h2>
+            <p className="text-sm text-zinc-400 leading-relaxed">
+              Audit findings are applied by opening a <span className="text-zinc-200">pull request</span> against the
+              GitHub repository that holds your website&rsquo;s source code. That means automated fixes are only
+              available when your site&rsquo;s code lives in a GitHub repo you can link below.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-teal-500/20 bg-teal-500/[0.04] p-4 space-y-2">
+              <p className="text-sm font-medium text-teal-300">✓ Fix PRs work</p>
+              <ul className="text-sm text-zinc-400 space-y-1 leading-relaxed">
+                <li>Sites with source in GitHub (Next.js, React, static, etc.)</li>
+                <li>Lovable projects with GitHub sync enabled</li>
+                <li>Any platform that two-way syncs to a GitHub repo</li>
+              </ul>
+            </div>
+            <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 space-y-2">
+              <p className="text-sm font-medium text-zinc-300">✗ No GitHub repo to PR</p>
+              <ul className="text-sm text-zinc-500 space-y-1 leading-relaxed">
+                <li>Wix, Squarespace, Webflow, Shopify</li>
+                <li>Framer, Carrd, and most no-code builders</li>
+                <li>Hosted CMSes with no source access</li>
+              </ul>
+            </div>
+          </div>
+
+          <p className="text-xs text-zinc-500 leading-relaxed">
+            On unsupported platforms the audit still runs and you still receive the full findings report — only the
+            automated pull request is unavailable, since there is no repository to open one against. Apply those fixes
+            in your builder&rsquo;s editor.
+          </p>
+        </SurfaceCard>
+
         {githubConfigured === false && (
           <p className="text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3">
             Set <code className="text-amber-200">GITHUB_TOKEN</code> in <code className="text-amber-200">.env.local</code>{' '}
