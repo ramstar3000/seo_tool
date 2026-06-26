@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SynapseCRO: AI-Powered Landing Pages for London Local Businesses",
+  title: "SynapseCRO: Conversion Rate Optimization (CRO) & AI Landing Pages for London Local Businesses",
   description:
     "SynapseCRO builds AI-powered landing pages to boost leads for London local businesses. Track visitor behavior, clicks, and real-time conversion updates.",
 };
@@ -45,6 +45,40 @@ export default function RootLayout({
             <SiteFooter />
           </ToastProvider>
         </AuthProvider>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://synapsecro.fly.dev/#organization",
+            "name": "SynapseCRO",
+            "url": "https://synapsecro.fly.dev/",
+            "logo": "https://synapsecro.fly.dev/logo.png",
+            "description": "SynapseCRO builds AI-powered landing pages to boost leads for London local businesses. Track visitor behavior, clicks, and real-time conversion updates.",
+            "sameAs": []
+          },
+          {
+            "@type": "Service",
+            "@id": "https://synapsecro.fly.dev/#service",
+            "name": "Conversion Rate Optimization (CRO) for Local Businesses",
+            "serviceType": "Conversion Rate Optimization",
+            "provider": {
+              "@type": "Organization",
+              "@id": "https://synapsecro.fly.dev/#organization"
+            },
+            "description": "AI-powered landing pages and SEO audits to boost leads and conversion rates for London local businesses.",
+            "url": "https://synapsecro.fly.dev/",
+            "areaServed": {
+              "@type": "AdministrativeArea",
+              "name": "London"
+            },
+            "audience": {
+              "@type": "Audience",
+              "audienceType": "Local Businesses in London"
+            }
+          }
+        ]
+      })}} />
       </body>
     </html>
   );
