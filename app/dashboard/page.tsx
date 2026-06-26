@@ -174,6 +174,11 @@ function hasSupabaseConfig(): boolean {
   return createBrowserSupabaseClient() !== null;
 }
 
+export const metadata = {
+  title: 'Dashboard — SynapseCRO',
+  description: 'Your activity dashboard for SynapseCRO, including visits, clicks, and recent agent logs.',
+};
+
 export default function Dashboard() {
   const [logs, setLogs] = useState<BrainLog[]>([]);
   const [metrics, setMetrics] = useState<Metrics>({
