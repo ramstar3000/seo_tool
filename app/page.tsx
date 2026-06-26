@@ -213,7 +213,8 @@ export default function Home() {
 
           <div id="audit-form" className="mt-12 sm:mt-14 text-left">
             {ctaState === 'success' && auditRequestId ? (
-              <SurfaceCard className="max-w-lg mx-auto px-6 py-5 text-center" role="status" aria-live="polite">
+              <div role="status" aria-live="polite">
+                <SurfaceCard className="max-w-lg mx-auto px-6 py-5 text-center">
                 <p className="text-teal-300 font-medium mb-1">Full audit started</p>
                 <p className="text-sm text-zinc-400 mb-4">
                   We&apos;re running a full SEO + CRO scan of{' '}
@@ -227,7 +228,8 @@ export default function Home() {
                 >
                   Open full audit report
                 </Link>
-              </SurfaceCard>
+                </SurfaceCard>
+              </div>
             ) : (
               <SurfaceCard className="max-w-lg mx-auto p-6 sm:p-7 shadow-xl shadow-black/20 space-y-5">
                 <header className="space-y-1.5 text-center sm:text-left">
