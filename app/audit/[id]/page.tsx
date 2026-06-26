@@ -205,6 +205,10 @@ function SeoIssuesSection({ findings }: { findings: AuditFinding[] }) {
   );
 }
 
+export const metadata = {
+  description: 'Your detailed website health audit report from SynapseCRO, including SEO, performance, and competitive analysis for local businesses.',
+};
+
 export default function VisitorAuditPage({ params }: { params: Promise<{ id: string }> }) {
   const [requestId, setRequestId] = useState<string | null>(null);
   const [data, setData] = useState<AuditRequestResponse | null>(null);
