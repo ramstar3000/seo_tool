@@ -85,6 +85,9 @@ export async function sendOutreachForLead(
       body: email.body,
       businessName: lead.business_name,
       testMode: recipient.testMode,
+      keyword: lead.keyword,
+      rankPosition: lead.rank_position,
+      location: lead.location,
     });
   } catch (error) {
     if (error instanceof ApiSpendCapExceededError) {

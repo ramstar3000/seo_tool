@@ -137,6 +137,7 @@ export function getClickHouseDatabase(): string {
   return process.env.CLICKHOUSE_DATABASE?.trim() || 'default';
 }
 
+/** True when CLICKHOUSE_URL is set (empty password OK for local Docker). */
 export function hasClickHouseConfig(): boolean {
-  return Boolean(getClickHouseUrl() && getClickHousePassword());
+  return Boolean(getClickHouseUrl());
 }
