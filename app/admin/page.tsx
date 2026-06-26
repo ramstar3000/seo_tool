@@ -25,6 +25,11 @@ const PRESETS: { label: string; lat: number; lon: number; place: string }[] = [
   { label: 'Camden', lat: 51.539, lon: -0.1426, place: 'Camden' },
 ];
 
+export const metadata = {
+  title: 'Lead Finder — SynapseCRO Admin',
+  description: 'Admin panel for SynapseCRO to find local business leads, verify emails, and draft personalized outreach.',
+};
+
 export default function AdminPage() {
   const { user, isLoading } = useAuth();
   const admin = isAdminEmail(user?.email);

@@ -6,6 +6,11 @@ import { FormEvent, Suspense, useMemo, useState } from 'react';
 import { formInputClass, PageContainer, SurfaceCard } from '@/components/ui/PageContainer';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 
+export const metadata = {
+  title: 'Sign in — SynapseCRO',
+  description: 'Sign in to your SynapseCRO account to access audits, lead research, and linked GitHub repos.',
+};
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
